@@ -14,10 +14,11 @@ export const login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await UserModel.findOne({ where: { email, password } }); // ⚠️ en producción usar bcrypt
+    const user = await UserModel.findOne({ where: { email, password } }); // ⚠️ En producción, usar bcrypt
 
     if (!user) {
-      return res.status(401).json({ message: 'Credenciales inválidas' });
+      // 🔁 Devolvemos 200 con un mensaje de fallo
+      return res.json({ message: 'Fail', error: 'Credenciales inválidas' });
     }
 
     const token = jwt.sign(
@@ -31,6 +32,7 @@ export const login = async (req, res) => {
       }
     );
 
+    // ✅ Login exitoso
     return res.json({
       message: 'Success',
       token,
@@ -42,7 +44,10 @@ export const login = async (req, res) => {
     });
   } catch (err) {
     console.error('Error en login:', err);
-    return res.status(500).json({ message: 'Error interno del servidor' });
+    return res.json({
+      message: 'Fail',
+      error: 'Error interno del servidor'
+    });
   }
 };
 
