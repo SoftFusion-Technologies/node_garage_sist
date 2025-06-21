@@ -13,6 +13,7 @@
 import express from 'express'; // Importa la librería Express
 const router = express.Router(); // Inicializa el router
 
+// Importar controladores de locales
 import {
   OBRS_Locales_CTS,
   OBR_Local_CTS,
@@ -20,6 +21,9 @@ import {
   ER_Local_CTS,
   UR_Local_CTS
 } from '../Controllers/Stock/CTS_TB_Locales.js';
+// Importar controladores de locales
+
+// Importar controladores de productos
 
 import {
   OBRS_Productos_CTS,
@@ -28,6 +32,17 @@ import {
   ER_Producto_CTS,
   UR_Producto_CTS
 } from '../Controllers/Stock/CTS_TB_Productos.js';
+// Importar controladores de productos
+
+// Importar controladores de talles
+import {
+  OBRS_Talles_CTS,
+  OBR_Talle_CTS,
+  CR_Talle_CTS,
+  ER_Talle_CTS,
+  UR_Talle_CTS
+} from '../Controllers/Stock/CTS_TB_Talles.js';
+// Importar controladores de talles
 
 // ----------------------------------------------------------------
 // Rutas para operaciones CRUD en la tabla 'locales'
@@ -66,6 +81,16 @@ router.delete('/productos/:id', ER_Producto_CTS);
 
 // Actualizar un producto
 router.put('/productos/:id', UR_Producto_CTS);
+
+// ----------------------------------------------------------------
+// Rutas para operaciones CRUD en la tabla 'talles'
+// ----------------------------------------------------------------
+
+router.get('/talles', OBRS_Talles_CTS);
+router.get('/talles/:id', OBR_Talle_CTS);
+router.post('/talles', CR_Talle_CTS);
+router.delete('/talles/:id', ER_Talle_CTS);
+router.put('/talles/:id', UR_Talle_CTS);
 
 
 export default router;
