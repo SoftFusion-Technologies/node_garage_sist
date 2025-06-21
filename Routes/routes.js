@@ -21,6 +21,14 @@ import {
   UR_Local_CTS
 } from '../Controllers/Stock/CTS_TB_Locales.js';
 
+import {
+  OBRS_Productos_CTS,
+  OBR_Producto_CTS,
+  CR_Producto_CTS,
+  ER_Producto_CTS,
+  UR_Producto_CTS
+} from '../Controllers/Stock/CTS_TB_Productos.js';
+
 // ----------------------------------------------------------------
 // Rutas para operaciones CRUD en la tabla 'locales'
 // ----------------------------------------------------------------
@@ -41,7 +49,23 @@ router.delete('/locales/:id', ER_Local_CTS);
 router.put('/locales/:id', UR_Local_CTS);
 
 // ----------------------------------------------------------------
-// Exportar controladores usados
+// Rutas para operaciones CRUD en la tabla 'productos'
 // ----------------------------------------------------------------
+
+// Obtener todos los productos
+router.get('/productos', OBRS_Productos_CTS);
+
+// Obtener un producto por ID
+router.get('/productos/:id', OBR_Producto_CTS);
+
+// Crear un nuevo producto
+router.post('/productos', CR_Producto_CTS);
+
+// Eliminar un producto
+router.delete('/productos/:id', ER_Producto_CTS);
+
+// Actualizar un producto
+router.put('/productos/:id', UR_Producto_CTS);
+
 
 export default router;
