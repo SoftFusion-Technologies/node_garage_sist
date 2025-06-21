@@ -54,7 +54,15 @@ import {
 } from '../Controllers/Stock/CTS_TB_Lugares.js';
 // Importar controladores de lugares
 
-
+// Importar controladores de estados
+import {
+  OBRS_Estados_CTS,
+  OBR_Estado_CTS,
+  CR_Estado_CTS,
+  ER_Estado_CTS,
+  UR_Estado_CTS
+} from '../Controllers/Stock/CTS_TB_Estados.js';
+// Importar controladores de estados
 
 // ----------------------------------------------------------------
 // Rutas para operaciones CRUD en la tabla 'locales'
@@ -104,7 +112,6 @@ router.post('/talles', CR_Talle_CTS);
 router.delete('/talles/:id', ER_Talle_CTS);
 router.put('/talles/:id', UR_Talle_CTS);
 
-
 // ----------------------------------------------------------------
 // Rutas para operaciones CRUD en la tabla 'Lugares'
 // ----------------------------------------------------------------
@@ -114,4 +121,14 @@ router.get('/lugares/:id', OBR_Lugar_CTS);
 router.post('/lugares', CR_Lugar_CTS);
 router.delete('/lugares/:id', ER_Lugar_CTS);
 router.put('/lugares/:id', UR_Lugar_CTS);
+
+// ----------------------------------------------------------------
+// Rutas para operaciones CRUD en la tabla 'Estados'
+// ----------------------------------------------------------------
+
+router.get('/estados', OBRS_Estados_CTS);
+router.get('/estados/:id', OBR_Estado_CTS);
+router.post('/estados', CR_Estado_CTS);
+router.delete('/estados/:id', ER_Estado_CTS);
+router.put('/estados/:id', UR_Estado_CTS);
 export default router;
