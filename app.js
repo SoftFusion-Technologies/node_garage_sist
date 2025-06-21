@@ -12,6 +12,9 @@ import dotenv from 'dotenv';
 import { login, authenticateToken } from './Security/auth.js'; // Importa las funciones del archivo auth.js
 import { PORT } from './DataBase/config.js';
 import mysql from 'mysql2/promise'; // Usar mysql2 para las promesas
+
+import './Models/relaciones.js';
+
 // CONFIGURACION PRODUCCION
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config();

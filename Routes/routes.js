@@ -64,6 +64,15 @@ import {
 } from '../Controllers/Stock/CTS_TB_Estados.js';
 // Importar controladores de estados
 
+// Importar controladores de stock
+import {
+  OBRS_Stock_CTS,
+  OBR_Stock_CTS,
+  CR_Stock_CTS,
+  ER_Stock_CTS,
+  UR_Stock_CTS
+} from '../Controllers/Stock/CTS_TB_Stock.js';
+
 // ----------------------------------------------------------------
 // Rutas para operaciones CRUD en la tabla 'locales'
 // ----------------------------------------------------------------
@@ -131,4 +140,14 @@ router.get('/estados/:id', OBR_Estado_CTS);
 router.post('/estados', CR_Estado_CTS);
 router.delete('/estados/:id', ER_Estado_CTS);
 router.put('/estados/:id', UR_Estado_CTS);
+
+// ----------------------------------------------------------------
+// Rutas para operaciones CRUD en la tabla 'Stock'
+// ----------------------------------------------------------------
+
+router.get('/stock', OBRS_Stock_CTS);
+router.get('/stock/:id', OBR_Stock_CTS);
+router.post('/stock', CR_Stock_CTS);
+router.delete('/stock/:id', ER_Stock_CTS);
+router.put('/stock/:id', UR_Stock_CTS);
 export default router;
