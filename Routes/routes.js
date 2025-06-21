@@ -44,6 +44,18 @@ import {
 } from '../Controllers/Stock/CTS_TB_Talles.js';
 // Importar controladores de talles
 
+// Importar controladores de lugares
+import {
+  OBRS_Lugares_CTS,
+  OBR_Lugar_CTS,
+  CR_Lugar_CTS,
+  ER_Lugar_CTS,
+  UR_Lugar_CTS
+} from '../Controllers/Stock/CTS_TB_Lugares.js';
+// Importar controladores de lugares
+
+
+
 // ----------------------------------------------------------------
 // Rutas para operaciones CRUD en la tabla 'locales'
 // ----------------------------------------------------------------
@@ -93,4 +105,13 @@ router.delete('/talles/:id', ER_Talle_CTS);
 router.put('/talles/:id', UR_Talle_CTS);
 
 
+// ----------------------------------------------------------------
+// Rutas para operaciones CRUD en la tabla 'Lugares'
+// ----------------------------------------------------------------
+
+router.get('/lugares', OBRS_Lugares_CTS);
+router.get('/lugares/:id', OBR_Lugar_CTS);
+router.post('/lugares', CR_Lugar_CTS);
+router.delete('/lugares/:id', ER_Lugar_CTS);
+router.put('/lugares/:id', UR_Lugar_CTS);
 export default router;
