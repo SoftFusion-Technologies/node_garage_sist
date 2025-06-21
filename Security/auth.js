@@ -1,46 +1,60 @@
+/*
+ * Programador: Benjamin Orellana
+ * Fecha actualización: 21 / 06 / 2025
+ *
+ * Descripción:
+ * Autenticación con JWT basada en la tabla 'usuarios'
+ */
+
 import jwt from 'jsonwebtoken';
-import db from '../DataBase/db.js';
+import { UserModel } from '../Models/MD_TB_Users.js';
 
 // Función de login
-
 export const login = async (req, res) => {
   const { email, password } = req.body;
 
-  const sql =
-    'SELECT * FROM users WHERE email = :email AND password = :password';
   try {
-    const [results, metadata] = await db.query(sql, {
-      replacements: { email: email, password: password }
-    });
-    if (results.length > 0) {
-      const user = results[0];
-      const token = jwt.sign({ id: user.id, level: user.level }, 'softfusion', {
-        expiresIn: '1h'
-      });
-      return res.json({
-        message: 'Success',
-        token,
-        id: user.id,
-        level: user.level,
-        name: user.name
-      });
-    } else {
-      return res.json('Fail');
+    const user = await UserModel.findOne({ where: { email, password } }); // ⚠️ en producción usar bcrypt
+
+    if (!user) {
+      return res.status(401).json({ message: 'Credenciales inválidas' });
     }
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        rol: user.rol
+      },
+      'softfusion',
+      {
+        expiresIn: '1h'
+      }
+    );
+
+    return res.json({
+      message: 'Success',
+      token,
+      id: user.id,
+      nombre: user.nombre,
+      email: user.email,
+      rol: user.rol,
+      local_id: user.local_id
+    });
   } catch (err) {
-    console.log('Error executing query', err);
-    return res.json('Error');
+    console.error('Error en login:', err);
+    return res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
 
+// Middleware para proteger rutas con token
 export const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const token = authHeader && authHeader.split(' ')[1]; // formato: Bearer TOKEN
 
-  if (token == null) return res.sendStatus(401);
+  if (!token) return res.sendStatus(401); // No autorizado
 
   jwt.verify(token, 'softfusion', (err, user) => {
-    if (err) return res.sendStatus(403);
+    if (err) return res.sendStatus(403); // Token inválido
     req.user = user;
     next();
   });

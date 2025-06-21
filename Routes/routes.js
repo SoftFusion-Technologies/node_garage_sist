@@ -73,6 +73,16 @@ import {
   UR_Stock_CTS
 } from '../Controllers/Stock/CTS_TB_Stock.js';
 
+// Importar controladores de usuarios
+import {
+  OBRS_Usuarios_CTS,
+  OBR_Usuario_CTS,
+  CR_Usuario_CTS,
+  ER_Usuario_CTS,
+  UR_Usuario_CTS
+} from '../Controllers/CTS_TB_Users.js';
+// Importar controladores de usuarios
+
 // ----------------------------------------------------------------
 // Rutas para operaciones CRUD en la tabla 'locales'
 // ----------------------------------------------------------------
@@ -150,4 +160,14 @@ router.get('/stock/:id', OBR_Stock_CTS);
 router.post('/stock', CR_Stock_CTS);
 router.delete('/stock/:id', ER_Stock_CTS);
 router.put('/stock/:id', UR_Stock_CTS);
+
+// ----------------------------------------------------------------
+// Rutas para operaciones CRUD en la tabla 'usuarios'
+// ----------------------------------------------------------------
+
+router.get('/usuarios', OBRS_Usuarios_CTS);
+router.get('/usuarios/:id', OBR_Usuario_CTS);
+router.post('/usuarios', CR_Usuario_CTS);
+router.delete('/usuarios/:id', ER_Usuario_CTS);
+router.put('/usuarios/:id', UR_Usuario_CTS);
 export default router;
