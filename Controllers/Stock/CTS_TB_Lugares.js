@@ -13,6 +13,7 @@
 // Importar el modelo
 import MD_TB_Lugares from '../../Models/Stock/MD_TB_Lugares.js';
 const LugaresModel = MD_TB_Lugares.LugaresModel;
+import { StockModel } from '../../Models/Stock/MD_TB_Stock.js'; // Asegurate de tenerlo
 
 // Obtener todos los lugares
 export const OBRS_Lugares_CTS = async (req, res) => {
@@ -55,20 +56,43 @@ export const CR_Lugar_CTS = async (req, res) => {
   }
 };
 
-// Eliminar un lugar
 export const ER_Lugar_CTS = async (req, res) => {
+  const { id } = req.params;
+  const forzar = req.query.forzar === 'true'; // ← detectamos el flag
+
   try {
-    const eliminado = await LugaresModel.destroy({
-      where: { id: req.params.id }
-    });
+    const tieneStock = await StockModel.findOne({ where: { lugar_id: id } });
+
+    if (tieneStock && !forzar) {
+      return res.status(409).json({
+        mensajeError:
+          'Este lugar tiene productos en stock asociados. ¿Desea eliminarlo de todas formas?'
+      });
+    }
+
+    if (tieneStock && forzar) {
+      // Anular el lugar en los registros de stock
+      await StockModel.update({ lugar_id: null }, { where: { lugar_id: id } });
+    }
+
+    // Eliminar el lugar
+    const eliminado = await LugaresModel.destroy({ where: { id } });
 
     if (!eliminado) {
       return res.status(404).json({ mensajeError: 'Lugar no encontrado' });
     }
 
-    res.json({ message: 'Lugar eliminado correctamente' });
+    res.json({
+      message: tieneStock
+        ? 'Lugar eliminado y stock desvinculado.'
+        : 'Lugar eliminado correctamente.'
+    });
   } catch (error) {
-    res.status(500).json({ mensajeError: error.message });
+    console.error('Error en ER_Lugar_CTS:', error);
+    res.status(500).json({
+      mensajeError: 'Error del servidor',
+      detalle: error.message
+    });
   }
 };
 

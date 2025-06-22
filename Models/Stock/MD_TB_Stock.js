@@ -37,7 +37,7 @@ export const StockModel = db.define(
     },
     lugar_id: {
       type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: false
+      allowNull: true
     },
     estado_id: {
       type: DataTypes.INTEGER.UNSIGNED,
