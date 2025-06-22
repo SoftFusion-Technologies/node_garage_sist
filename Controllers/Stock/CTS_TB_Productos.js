@@ -49,15 +49,8 @@ export const OBR_Producto_CTS = async (req, res) => {
 // Crear un nuevo producto
 // ✅ Controlador corregido
 export const CR_Producto_CTS = async (req, res) => {
-  const {
-    nombre,
-    descripcion,
-    categoria,
-    codigo_sku,
-    precio,
-    imagen_url,
-    estado
-  } = req.body;
+  const { nombre, descripcion, categoria, precio, imagen_url, estado } =
+    req.body;
 
   console.log('BODY RECIBIDO:', req.body); // 👈 DEBUG
 
@@ -66,7 +59,6 @@ export const CR_Producto_CTS = async (req, res) => {
       nombre,
       descripcion,
       categoria,
-      codigo_sku,
       precio: parseFloat(precio), // 👈 Convertís acá
       imagen_url,
       estado

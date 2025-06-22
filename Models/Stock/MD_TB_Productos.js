@@ -35,11 +35,6 @@ export const ProductosModel = db.define(
       type: DataTypes.STRING(100),
       allowNull: true
     },
-    codigo_sku: {
-      type: DataTypes.STRING(50),
-      unique: true,
-      allowNull: true
-    },
     precio: {
       type: DataTypes.DECIMAL(18, 2),
       defaultValue: 0.0

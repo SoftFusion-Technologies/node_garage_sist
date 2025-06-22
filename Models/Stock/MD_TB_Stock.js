@@ -50,6 +50,10 @@ export const StockModel = db.define(
     en_perchero: {
       type: DataTypes.BOOLEAN,
       defaultValue: true
+    },
+    codigo_sku: {
+      type: DataTypes.STRING(150),
+      allowNull: true
     }
   },
   {
