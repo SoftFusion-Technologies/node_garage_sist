@@ -45,24 +45,34 @@ export const OBR_Producto_CTS = async (req, res) => {
 };
 
 // Crear un nuevo producto
+// ✅ Controlador corregido
 export const CR_Producto_CTS = async (req, res) => {
-  const { nombre, descripcion, categoria, codigo_sku } = req.body;
+  const {
+    nombre,
+    descripcion,
+    categoria,
+    codigo_sku,
+    precio,
+    imagen_url,
+    estado
+  } = req.body;
 
-  if (!nombre) {
-    return res
-      .status(400)
-      .json({ mensajeError: 'El nombre del producto es obligatorio' });
-  }
+  console.log('BODY RECIBIDO:', req.body); // 👈 DEBUG
 
   try {
     const nuevo = await ProductosModel.create({
       nombre,
       descripcion,
       categoria,
-      codigo_sku
+      codigo_sku,
+      precio: parseFloat(precio), // 👈 Convertís acá
+      imagen_url,
+      estado
     });
+
     res.json({ message: 'Producto creado correctamente', producto: nuevo });
   } catch (error) {
+    console.error('❌ Error en CR_Producto_CTS:', error);
     res.status(500).json({ mensajeError: error.message });
   }
 };

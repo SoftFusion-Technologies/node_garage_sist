@@ -39,10 +39,22 @@ export const ProductosModel = db.define(
       type: DataTypes.STRING(50),
       unique: true,
       allowNull: true
+    },
+    precio: {
+      type: DataTypes.DECIMAL(18, 2),
+      defaultValue: 0.0
+    },
+    imagen_url: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
+    estado: {
+      type: DataTypes.ENUM('activo', 'inactivo'),
+      defaultValue: 'activo'
     }
   },
   {
-    timestamps: false,
+    timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at'
   }
