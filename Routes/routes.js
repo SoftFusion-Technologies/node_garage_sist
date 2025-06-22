@@ -70,7 +70,8 @@ import {
   OBR_Stock_CTS,
   CR_Stock_CTS,
   ER_Stock_CTS,
-  UR_Stock_CTS
+  UR_Stock_CTS,
+  ER_StockPorProducto
 } from '../Controllers/Stock/CTS_TB_Stock.js';
 
 // Importar controladores de usuarios
@@ -160,6 +161,7 @@ router.get('/stock/:id', OBR_Stock_CTS);
 router.post('/stock', CR_Stock_CTS);
 router.delete('/stock/:id', ER_Stock_CTS);
 router.put('/stock/:id', UR_Stock_CTS);
+router.delete('/stock/producto/:id', ER_StockPorProducto);
 
 // ----------------------------------------------------------------
 // Rutas para operaciones CRUD en la tabla 'usuarios'

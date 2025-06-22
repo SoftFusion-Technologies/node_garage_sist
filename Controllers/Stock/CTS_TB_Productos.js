@@ -21,6 +21,8 @@
 import MD_TB_Productos from '../../Models/Stock/MD_TB_Productos.js';
 const ProductosModel = MD_TB_Productos.ProductosModel;
 
+import { StockModel } from '../../Models/Stock/MD_TB_Stock.js'; // Asegurate de tenerlo
+
 // Obtener todos los productos
 export const OBRS_Productos_CTS = async (req, res) => {
   try {
@@ -79,10 +81,21 @@ export const CR_Producto_CTS = async (req, res) => {
 
 // Eliminar un producto
 export const ER_Producto_CTS = async (req, res) => {
+  const { id } = req.params;
+
   try {
-    const eliminado = await ProductosModel.destroy({
-      where: { id: req.params.id }
-    });
+    // Verificar si hay stock asociado
+    const tieneStock = await StockModel.findOne({ where: { producto_id: id } });
+
+    if (tieneStock) {
+      return res.status(409).json({
+        mensajeError:
+          'Este producto tiene stock asociado. ¿Desea eliminarlo de todas formas incluyendo el stock?'
+      });
+    }
+
+    // Eliminar el producto directamente si no tiene stock
+    const eliminado = await ProductosModel.destroy({ where: { id } });
 
     if (!eliminado) {
       return res.status(404).json({ mensajeError: 'Producto no encontrado' });
@@ -93,7 +106,6 @@ export const ER_Producto_CTS = async (req, res) => {
     res.status(500).json({ mensajeError: error.message });
   }
 };
-
 // Actualizar un producto
 export const UR_Producto_CTS = async (req, res) => {
   const { id } = req.params;

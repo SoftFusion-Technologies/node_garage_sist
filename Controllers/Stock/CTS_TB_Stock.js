@@ -102,3 +102,12 @@ export const UR_Stock_CTS = async (req, res) => {
     res.status(500).json({ mensajeError: error.message });
   }
 };
+
+export const ER_StockPorProducto = async (req, res) => {
+  try {
+    await StockModel.destroy({ where: { producto_id: req.params.id } });
+    res.json({ message: 'Stock eliminado' });
+  } catch (error) {
+    res.status(500).json({ mensajeError: error.message });
+  }
+};
