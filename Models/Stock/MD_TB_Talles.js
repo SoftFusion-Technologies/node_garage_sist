@@ -26,10 +26,26 @@ export const TallesModel = db.define(
     nombre: {
       type: DataTypes.STRING(20),
       allowNull: false
+    },
+    descripcion: {
+      type: DataTypes.STRING(255),
+      defaultValue: ''
+    },
+    tipo_categoria: {
+      type: DataTypes.ENUM('ropa', 'calzado', 'accesorio'),
+      defaultValue: 'ropa'
+    },
+    created_at: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW
+    },
+    updated_at: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW
     }
   },
   {
-    timestamps: false,
+    timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at'
   }
