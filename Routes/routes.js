@@ -93,6 +93,9 @@ import {
   UR_Categoria_CTS
 } from '../Controllers/Stock/CTS_TB_Categorias.js';
 // Importar controladores de categorias
+
+import importRouter from './importRouter.js'; // 🆕 CARGA MASIVA
+
 // ----------------------------------------------------------------
 // Rutas para operaciones CRUD en la tabla 'locales'
 // ----------------------------------------------------------------
@@ -191,4 +194,7 @@ router.get('/categorias/:id', OBR_Categoria_CTS);
 router.post('/categorias', CR_Categoria_CTS);
 router.delete('/categorias/:id', ER_Categoria_CTS);
 router.put('/categorias/:id', UR_Categoria_CTS);
+
+// Rutas de carga masiva
+router.use('/carga-masiva', importRouter); // 🆕  (=> POST /api/import/:tabla)
 export default router;

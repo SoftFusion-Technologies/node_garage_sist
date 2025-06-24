@@ -25,7 +25,7 @@ export const StockModel = db.define(
   {
     producto_id: {
       type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: false
+      allowNull: true
     },
     talle_id: {
       type: DataTypes.INTEGER.UNSIGNED,
@@ -33,7 +33,7 @@ export const StockModel = db.define(
     },
     local_id: {
       type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: false
+      allowNull: true
     },
     lugar_id: {
       type: DataTypes.INTEGER.UNSIGNED,
