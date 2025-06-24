@@ -41,7 +41,7 @@ export const StockModel = db.define(
     },
     estado_id: {
       type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: false
+      allowNull: true
     },
     cantidad: {
       type: DataTypes.INTEGER,
