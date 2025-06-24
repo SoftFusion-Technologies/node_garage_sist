@@ -4,9 +4,9 @@
  * Versión: 1.0
  *
  * Descripción:
- * Este archivo (MD_TB_Productos.js) contiene la definición del modelo Sequelize para la tabla de productos.
+ * Este archivo (MD_TB_Categorias.js) contiene la definición del modelo Sequelize para la tabla de productos.
  *
- * Tema: Modelos - Productos
+ * Tema: Modelos - Categorias
  * Capa: Backend
  */
 
@@ -18,10 +18,8 @@ import { DataTypes } from 'sequelize';
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
 }
-
-// Definición del modelo de la tabla 'productos'
-export const ProductosModel = db.define(
-  'productos',
+export const CategoriasModel = db.define(
+  'categorias',
   {
     nombre: {
       type: DataTypes.STRING(100),
@@ -29,22 +27,6 @@ export const ProductosModel = db.define(
     },
     descripcion: {
       type: DataTypes.TEXT,
-      allowNull: true
-    },
-    categoria_id: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: 'categorias',
-        key: 'id'
-      }
-    },
-    precio: {
-      type: DataTypes.DECIMAL(18, 2),
-      defaultValue: 0.0
-    },
-    imagen_url: {
-      type: DataTypes.STRING(255),
       allowNull: true
     },
     estado: {
@@ -58,7 +40,3 @@ export const ProductosModel = db.define(
     updatedAt: 'updated_at'
   }
 );
-
-export default {
-  ProductosModel
-};

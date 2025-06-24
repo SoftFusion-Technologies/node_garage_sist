@@ -17,6 +17,7 @@ import { TallesModel } from './Stock/MD_TB_Talles.js';
 import { LocalesModel } from './Stock/MD_TB_Locales.js';
 import { LugaresModel } from './Stock/MD_TB_Lugares.js';
 import { EstadosModel } from './Stock/MD_TB_Estados.js';
+import { CategoriasModel } from './Stock/MD_TB_Categorias.js';
 
 // Relaciones de Stock con otras tablas
 StockModel.belongsTo(ProductosModel, { foreignKey: 'producto_id' });
@@ -31,3 +32,15 @@ TallesModel.hasMany(StockModel, { foreignKey: 'talle_id' });
 LocalesModel.hasMany(StockModel, { foreignKey: 'local_id' });
 LugaresModel.hasMany(StockModel, { foreignKey: 'lugar_id' });
 EstadosModel.hasMany(StockModel, { foreignKey: 'estado_id' });
+// Relación Producto pertenece a Categoría
+ProductosModel.belongsTo(CategoriasModel, {
+    foreignKey: 'categoria_id',
+    as: 'categoria'
+  });
+  
+  // (Opcional) Si querés ver qué productos tiene una categoría
+  CategoriasModel.hasMany(ProductosModel, {
+    foreignKey: 'categoria_id',
+    as: 'productos'
+  });
+  
