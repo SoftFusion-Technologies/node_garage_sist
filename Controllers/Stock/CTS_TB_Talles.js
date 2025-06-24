@@ -39,7 +39,7 @@ export const OBR_Talle_CTS = async (req, res) => {
 
 // Crear un nuevo talle
 export const CR_Talle_CTS = async (req, res) => {
-  const { nombre } = req.body;
+  const { nombre, descripcion, tipo_categoria } = req.body;
 
   if (!nombre) {
     return res
@@ -48,7 +48,12 @@ export const CR_Talle_CTS = async (req, res) => {
   }
 
   try {
-    const nuevo = await TallesModel.create({ nombre });
+    const nuevo = await TallesModel.create({
+      nombre,
+      descripcion: descripcion || '',
+      tipo_categoria: tipo_categoria || 'ropa'
+    });
+
     res.json({ message: 'Talle creado correctamente', talle: nuevo });
   } catch (error) {
     res.status(500).json({ mensajeError: error.message });
