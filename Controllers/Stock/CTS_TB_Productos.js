@@ -84,7 +84,7 @@ export const ER_Producto_CTS = async (req, res) => {
     if (tieneStock) {
       return res.status(409).json({
         mensajeError:
-          'Este producto tiene stock asociado. ¿Desea eliminarlo de todas formas incluyendo el stock?'
+          'Este PRODUCTO tiene stock asociado. ¿Desea eliminarlo de todas formas incluyendo el stock?'
       });
     }
 

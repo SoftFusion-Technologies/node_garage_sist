@@ -29,7 +29,7 @@ export const StockModel = db.define(
     },
     talle_id: {
       type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: false
+      allowNull: true
     },
     local_id: {
       type: DataTypes.INTEGER.UNSIGNED,
