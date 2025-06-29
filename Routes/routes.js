@@ -206,7 +206,12 @@ router.put('/categorias/:id', UR_Categoria_CTS);
 router.use('/carga-masiva', importRouter); // 🆕  (=> POST /api/import/:tabla)
 
 // MODULO DE VENTAS
-import { buscarItemsVenta } from '../Controllers/Ventas/ventasControllerPOS.js';
+import {
+  buscarItemsVenta,
+  buscarItemsVentaAgrupado,
+  buscarItemsVentaDetallado
+} from '../Controllers/Ventas/ventasControllerPOS.js';
 router.get('/buscar-productos', buscarItemsVenta);
-
+router.get('/buscar-productos-agrupados', buscarItemsVentaAgrupado);
+router.get('/buscar-productos-detallado', buscarItemsVentaDetallado);
 export default router;
