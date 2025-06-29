@@ -71,7 +71,10 @@ import {
   CR_Stock_CTS,
   ER_Stock_CTS,
   UR_Stock_CTS,
-  ER_StockPorProducto
+  ER_StockPorProducto,
+  DISTRIBUIR_Stock_CTS,
+  TRANSFERIR_Stock_CTS,
+  ER_StockPorGrupo
 } from '../Controllers/Stock/CTS_TB_Stock.js';
 
 // Importar controladores de usuarios
@@ -174,6 +177,10 @@ router.post('/stock', CR_Stock_CTS);
 router.delete('/stock/:id', ER_Stock_CTS);
 router.put('/stock/:id', UR_Stock_CTS);
 router.delete('/stock/producto/:id', ER_StockPorProducto);
+// Ruta para distribuir stock por talle
+router.post('/distribuir', DISTRIBUIR_Stock_CTS);
+router.post('/transferir', TRANSFERIR_Stock_CTS);
+router.post('/eliminar-grupo', ER_StockPorGrupo);
 
 // ----------------------------------------------------------------
 // Rutas para operaciones CRUD en la tabla 'usuarios'
