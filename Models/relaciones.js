@@ -23,6 +23,10 @@ import { CategoriasModel } from './Stock/MD_TB_Categorias.js';
 import { VentasModel } from './Ventas/MD_TB_Ventas.js';
 import { UserModel } from './MD_TB_Users.js';
 import { ClienteModel } from './MD_TB_Clientes.js';
+import { DetalleVentaModel } from './Ventas/MD_TB_DetalleVenta.js';
+import { VentaMediosPagoModel } from './Ventas/MD_TB_VentaMediosPago.js';
+import { MediosPagoModel } from './Ventas/MD_TB_MediosPago.js';
+
 // RELACIONES MODULO DE VENTAS
 
 // Relaciones de Stock con otras tablas
@@ -58,4 +62,16 @@ VentasModel.belongsTo(LocalesModel, { foreignKey: 'local_id' });
 ClienteModel.hasMany(VentasModel, { foreignKey: 'cliente_id' });
 UserModel.hasMany(VentasModel, { foreignKey: 'usuario_id' });
 LocalesModel.hasMany(VentasModel, { foreignKey: 'local_id' });
+
+DetalleVentaModel.belongsTo(VentasModel, { foreignKey: 'venta_id' });
+DetalleVentaModel.belongsTo(StockModel, { foreignKey: 'stock_id' });
+
+VentasModel.hasMany(DetalleVentaModel, { foreignKey: 'venta_id' });
+StockModel.hasMany(DetalleVentaModel, { foreignKey: 'stock_id' });
+
+VentaMediosPagoModel.belongsTo(VentasModel, { foreignKey: 'venta_id' });
+VentaMediosPagoModel.belongsTo(MediosPagoModel, {
+  foreignKey: 'medio_pago_id'
+});
+
 // RELACIONES MODULO DE VENTAS

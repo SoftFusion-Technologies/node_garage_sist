@@ -258,9 +258,29 @@ import {
 // Rutas para operaciones CRUD en la tabla 'ventas'
 // ----------------------------------------------------------------
 
-router.get('/ventas', OBRS_Ventas_CTS);        // Obtener todas las ventas
-router.get('/ventas/:id', OBR_Venta_CTS);      // Obtener una venta por ID
-router.post('/ventas', CR_Venta_CTS);          // Crear nueva venta
-router.delete('/ventas/:id', ER_Venta_CTS);    // Eliminar venta por ID
-router.put('/ventas/:id', UR_Venta_CTS);       // Actualizar venta por ID
+router.get('/ventas', OBRS_Ventas_CTS); // Obtener todas las ventas
+router.get('/ventas/:id', OBR_Venta_CTS); // Obtener una venta por ID
+router.post('/ventas', CR_Venta_CTS); // Crear nueva venta
+router.delete('/ventas/:id', ER_Venta_CTS); // Eliminar venta por ID
+router.put('/ventas/:id', UR_Venta_CTS); // Actualizar venta por ID
+
+// Importar controladores de detalle_venta
+import {
+  OBRS_DetalleVenta_CTS,
+  OBR_DetalleVenta_CTS,
+  CR_DetalleVenta_CTS,
+  ER_DetalleVenta_CTS,
+  UR_DetalleVenta_CTS
+} from '../Controllers/Ventas/CTS_TB_DetalleVenta.js';
+
+// ----------------------------------------------------------------
+// Rutas para operaciones CRUD en la tabla 'detalle_venta'
+// ----------------------------------------------------------------
+
+router.get('/detalle_venta', OBRS_DetalleVenta_CTS); // Obtener todos los detalles
+router.get('/detalle_venta/:id', OBR_DetalleVenta_CTS); // Obtener un detalle por ID
+router.post('/detalle_venta', CR_DetalleVenta_CTS); // Crear nuevo detalle
+router.delete('/detalle_venta/:id', ER_DetalleVenta_CTS); // Eliminar detalle por ID
+router.put('/detalle_venta/:id', UR_DetalleVenta_CTS); // Actualizar detalle por ID
+
 export default router;
