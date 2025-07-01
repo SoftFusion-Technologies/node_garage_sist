@@ -26,6 +26,8 @@ import { ClienteModel } from './MD_TB_Clientes.js';
 import { DetalleVentaModel } from './Ventas/MD_TB_DetalleVenta.js';
 import { VentaMediosPagoModel } from './Ventas/MD_TB_VentaMediosPago.js';
 import { MediosPagoModel } from './Ventas/MD_TB_MediosPago.js';
+import { CajaModel } from './Ventas/MD_TB_Caja.js';
+import { MovimientosCajaModel } from './Ventas/MD_TB_MovimientosCaja.js';
 
 // RELACIONES MODULO DE VENTAS
 
@@ -73,5 +75,12 @@ VentaMediosPagoModel.belongsTo(VentasModel, { foreignKey: 'venta_id' });
 VentaMediosPagoModel.belongsTo(MediosPagoModel, {
   foreignKey: 'medio_pago_id'
 });
+
+// (Opcional) Relaciones en relaciones.js:
+CajaModel.belongsTo(LocalesModel, { foreignKey: 'local_id' });
+CajaModel.belongsTo(UserModel, { foreignKey: 'usuario_id' });
+
+// (Opcional) Relaciones en relaciones.js:
+MovimientosCajaModel.belongsTo(CajaModel, { foreignKey: 'caja_id' });
 
 // RELACIONES MODULO DE VENTAS

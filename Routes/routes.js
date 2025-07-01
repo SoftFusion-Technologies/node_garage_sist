@@ -283,4 +283,61 @@ router.post('/detalle_venta', CR_DetalleVenta_CTS); // Crear nuevo detalle
 router.delete('/detalle_venta/:id', ER_DetalleVenta_CTS); // Eliminar detalle por ID
 router.put('/detalle_venta/:id', UR_DetalleVenta_CTS); // Actualizar detalle por ID
 
+// Importar controladores de venta_medios_pago
+import {
+  OBRS_VentaMediosPago_CTS,
+  OBR_VentaMediosPago_CTS,
+  CR_VentaMediosPago_CTS,
+  ER_VentaMediosPago_CTS,
+  UR_VentaMediosPago_CTS
+} from '../Controllers/Ventas/CTS_TB_VentaMediosPago.js';
+
+// ----------------------------------------------------------------
+// Rutas para operaciones CRUD en la tabla 'venta_medios_pago'
+// ----------------------------------------------------------------
+
+router.get('/venta_medios_pago', OBRS_VentaMediosPago_CTS); // Todos los registros
+router.get('/venta_medios_pago/:id', OBR_VentaMediosPago_CTS); // Por ID
+router.post('/venta_medios_pago', CR_VentaMediosPago_CTS); // Crear nuevo
+router.delete('/venta_medios_pago/:id', ER_VentaMediosPago_CTS); // Eliminar por ID
+router.put('/venta_medios_pago/:id', UR_VentaMediosPago_CTS); // Actualizar por ID
+
+// Importar controladores de caja
+import {
+  OBRS_Caja_CTS,
+  OBR_Caja_CTS,
+  CR_Caja_CTS,
+  ER_Caja_CTS,
+  UR_Caja_CTS
+} from '../Controllers/Ventas/CTS_TB_Caja.js';
+
+// ----------------------------------------------------------------
+// Rutas para operaciones CRUD en la tabla 'caja'
+// ----------------------------------------------------------------
+
+router.get('/caja', OBRS_Caja_CTS); // Obtener todas las cajas
+router.get('/caja/:id', OBR_Caja_CTS); // Obtener una caja por ID
+router.post('/caja', CR_Caja_CTS); // Abrir nueva caja
+router.delete('/caja/:id', ER_Caja_CTS); // Eliminar caja por ID
+router.put('/caja/:id', UR_Caja_CTS); // Actualizar/cerrar caja por ID
+
+// Importar controladores de movimientos_caja
+import {
+  OBRS_MovimientosCaja_CTS,
+  OBR_MovimientoCaja_CTS,
+  CR_MovimientoCaja_CTS,
+  ER_MovimientoCaja_CTS,
+  UR_MovimientoCaja_CTS
+} from '../Controllers/Ventas/CTS_TB_MovimientosCaja.js';
+
+// ----------------------------------------------------------------
+// Rutas para operaciones CRUD en la tabla 'movimientos_caja'
+// ----------------------------------------------------------------
+
+router.get('/movimientos_caja', OBRS_MovimientosCaja_CTS); // Obtener todos los movimientos
+router.get('/movimientos_caja/:id', OBR_MovimientoCaja_CTS); // Obtener un movimiento por ID
+router.post('/movimientos_caja', CR_MovimientoCaja_CTS); // Crear movimiento nuevo
+router.delete('/movimientos_caja/:id', ER_MovimientoCaja_CTS); // Eliminar movimiento por ID
+router.put('/movimientos_caja/:id', UR_MovimientoCaja_CTS); // Actualizar movimiento por ID
+
 export default router;
