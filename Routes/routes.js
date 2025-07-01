@@ -87,6 +87,14 @@ import {
 } from '../Controllers/CTS_TB_Users.js';
 // Importar controladores de usuarios
 
+// Importar controladores de clientes
+import {
+  OBRS_Clientes_CTS,
+  OBR_Cliente_CTS,
+  CR_Cliente_CTS,
+  ER_Cliente_CTS,
+  UR_Cliente_CTS
+} from '../Controllers/CTS_TB_Clientes.js';
 // Importar controladores de categorias
 import {
   OBRS_Categorias_CTS,
@@ -192,6 +200,15 @@ router.post('/usuarios', CR_Usuario_CTS);
 router.delete('/usuarios/:id', ER_Usuario_CTS);
 router.put('/usuarios/:id', UR_Usuario_CTS);
 
+// ----------------------------------------------------------------
+// Rutas para operaciones CRUD en la tabla 'clientes'
+// ----------------------------------------------------------------
+
+router.get('/clientes', OBRS_Clientes_CTS);
+router.get('/clientes/:id', OBR_Cliente_CTS);
+router.post('/clientes', CR_Cliente_CTS);
+router.delete('/clientes/:id', ER_Cliente_CTS);
+router.put('/clientes/:id', UR_Cliente_CTS);
 // ----------------------------------------------------------------
 // Rutas para operaciones CRUD en la tabla 'categorias'
 // ----------------------------------------------------------------
