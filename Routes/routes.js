@@ -214,4 +214,18 @@ import {
 router.get('/buscar-productos', buscarItemsVenta);
 router.get('/buscar-productos-agrupados', buscarItemsVentaAgrupado);
 router.get('/buscar-productos-detallado', buscarItemsVentaDetallado);
+
+import {
+  OBRS_MediosPago_CTS,
+  OBR_MedioPago_CTS,
+  CR_MedioPago_CTS,
+  ER_MedioPago_CTS,
+  UR_MedioPago_CTS
+} from '../Controllers/Ventas/CTS_TB_MediosPago.js';
+router.get('/medios-pago', OBRS_MediosPago_CTS);
+router.get('/medios-pago/:id', OBR_MedioPago_CTS);
+router.post('/medios-pago', CR_MedioPago_CTS);
+router.delete('/medios-pago/:id', ER_MedioPago_CTS);
+router.put('/medios-pago/:id', UR_MedioPago_CTS);
+
 export default router;
