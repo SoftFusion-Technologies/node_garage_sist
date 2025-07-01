@@ -245,4 +245,22 @@ router.post('/medios-pago', CR_MedioPago_CTS);
 router.delete('/medios-pago/:id', ER_MedioPago_CTS);
 router.put('/medios-pago/:id', UR_MedioPago_CTS);
 
+// Importar controladores de ventas
+import {
+  OBRS_Ventas_CTS,
+  OBR_Venta_CTS,
+  CR_Venta_CTS,
+  ER_Venta_CTS,
+  UR_Venta_CTS
+} from '../Controllers/Ventas/CTS_TB_Ventas.js';
+
+// ----------------------------------------------------------------
+// Rutas para operaciones CRUD en la tabla 'ventas'
+// ----------------------------------------------------------------
+
+router.get('/ventas', OBRS_Ventas_CTS);        // Obtener todas las ventas
+router.get('/ventas/:id', OBR_Venta_CTS);      // Obtener una venta por ID
+router.post('/ventas', CR_Venta_CTS);          // Crear nueva venta
+router.delete('/ventas/:id', ER_Venta_CTS);    // Eliminar venta por ID
+router.put('/ventas/:id', UR_Venta_CTS);       // Actualizar venta por ID
 export default router;

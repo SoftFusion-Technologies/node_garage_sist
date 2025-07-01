@@ -19,6 +19,12 @@ import { LugaresModel } from './Stock/MD_TB_Lugares.js';
 import { EstadosModel } from './Stock/MD_TB_Estados.js';
 import { CategoriasModel } from './Stock/MD_TB_Categorias.js';
 
+// RELACIONES MODULO DE VENTAS
+import { VentasModel } from './Ventas/MD_TB_Ventas.js';
+import { UserModel } from './MD_TB_Users.js';
+import { ClienteModel } from './MD_TB_Clientes.js';
+// RELACIONES MODULO DE VENTAS
+
 // Relaciones de Stock con otras tablas
 StockModel.belongsTo(ProductosModel, { foreignKey: 'producto_id' });
 StockModel.belongsTo(TallesModel, { foreignKey: 'talle_id' });
@@ -34,13 +40,22 @@ LugaresModel.hasMany(StockModel, { foreignKey: 'lugar_id' });
 EstadosModel.hasMany(StockModel, { foreignKey: 'estado_id' });
 // Relación Producto pertenece a Categoría
 ProductosModel.belongsTo(CategoriasModel, {
-    foreignKey: 'categoria_id',
-    as: 'categoria'
-  });
-  
-  // (Opcional) Si querés ver qué productos tiene una categoría
-  CategoriasModel.hasMany(ProductosModel, {
-    foreignKey: 'categoria_id',
-    as: 'productos'
-  });
-  
+  foreignKey: 'categoria_id',
+  as: 'categoria'
+});
+
+// (Opcional) Si querés ver qué productos tiene una categoría
+CategoriasModel.hasMany(ProductosModel, {
+  foreignKey: 'categoria_id',
+  as: 'productos'
+});
+
+// RELACIONES MODULO DE VENTAS
+VentasModel.belongsTo(ClienteModel, { foreignKey: 'cliente_id' });
+VentasModel.belongsTo(UserModel, { foreignKey: 'usuario_id' });
+VentasModel.belongsTo(LocalesModel, { foreignKey: 'local_id' });
+
+ClienteModel.hasMany(VentasModel, { foreignKey: 'cliente_id' });
+UserModel.hasMany(VentasModel, { foreignKey: 'usuario_id' });
+LocalesModel.hasMany(VentasModel, { foreignKey: 'local_id' });
+// RELACIONES MODULO DE VENTAS
