@@ -93,7 +93,9 @@ import {
   OBR_Cliente_CTS,
   CR_Cliente_CTS,
   ER_Cliente_CTS,
-  UR_Cliente_CTS
+  UR_Cliente_CTS,
+  SEARCH_Clientes_CTS,
+  OBR_HistorialComprasCliente_CTS
 } from '../Controllers/CTS_TB_Clientes.js';
 // Importar controladores de categorias
 import {
@@ -204,11 +206,14 @@ router.put('/usuarios/:id', UR_Usuario_CTS);
 // Rutas para operaciones CRUD en la tabla 'clientes'
 // ----------------------------------------------------------------
 
+router.get('/clientes/search', SEARCH_Clientes_CTS); // PRIMERO
 router.get('/clientes', OBRS_Clientes_CTS);
-router.get('/clientes/:id', OBR_Cliente_CTS);
+router.get('/clientes/:id', OBR_Cliente_CTS); // DESPUÉS
 router.post('/clientes', CR_Cliente_CTS);
 router.delete('/clientes/:id', ER_Cliente_CTS);
 router.put('/clientes/:id', UR_Cliente_CTS);
+router.get('/clientes/:id/ventas', OBR_HistorialComprasCliente_CTS);
+
 // ----------------------------------------------------------------
 // Rutas para operaciones CRUD en la tabla 'categorias'
 // ----------------------------------------------------------------
@@ -226,11 +231,15 @@ router.use('/carga-masiva', importRouter); // 🆕  (=> POST /api/import/:tabla)
 import {
   buscarItemsVenta,
   buscarItemsVentaAgrupado,
-  buscarItemsVentaDetallado
+  buscarItemsVentaDetallado,
+  registrarVenta,
+  OBR_VentaDetalle_CTS
 } from '../Controllers/Ventas/ventasControllerPOS.js';
 router.get('/buscar-productos', buscarItemsVenta);
 router.get('/buscar-productos-agrupados', buscarItemsVentaAgrupado);
 router.get('/buscar-productos-detallado', buscarItemsVentaDetallado);
+router.post('/ventas/pos', registrarVenta);
+router.get('/ventas/:id/detalle', OBR_VentaDetalle_CTS);
 
 import {
   OBRS_MediosPago_CTS,

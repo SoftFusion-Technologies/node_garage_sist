@@ -12,8 +12,9 @@
 
 // Importar el modelo
 import MD_TB_Clientes from '../Models/MD_TB_Clientes.js';
-
+import { VentasModel } from '../Models/Ventas/MD_TB_Ventas.js';
 const ClienteModel = MD_TB_Clientes.ClienteModel;
+import { Op } from 'sequelize';
 
 // Obtener todos los clientes
 export const OBRS_Clientes_CTS = async (req, res) => {
@@ -94,6 +95,62 @@ export const UR_Cliente_CTS = async (req, res) => {
     } else {
       res.status(404).json({ mensajeError: 'Cliente no encontrado' });
     }
+  } catch (error) {
+    res.status(500).json({ mensajeError: error.message });
+  }
+};
+
+// Buscar clientes por nombre, DNI, teléfono o email (búsqueda rápida/autosuggest)
+// Buscar clientes por nombre, DNI, teléfono o email (búsqueda rápida/autosuggest)
+export const SEARCH_Clientes_CTS = async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query || query.trim().length < 2) return res.json([]);
+    const cleanQuery = query.trim().replace(/\s/g, '');
+
+    // Si la query es numérica: buscar coincidencia exacta de DNI
+    if (/^\d+$/.test(cleanQuery)) {
+      const clientes = await ClienteModel.findAll({
+        where: {
+          [Op.and]: [
+            { dni: cleanQuery },
+            { dni: { [Op.notIn]: ['', 'Sin DNI'] } }   // <--- QUITÁ null
+          ]
+        }
+      });
+      if (clientes.length > 0) return res.json(clientes);
+      return res.status(404).json({ mensajeError: 'Cliente no encontrado' });
+    }
+
+    // Si es texto: buscar por nombre o email parcial
+    const clientes = await ClienteModel.findAll({
+      where: {
+        [Op.or]: [
+          { nombre: { [Op.like]: `%${cleanQuery}%` } },
+          { email: { [Op.like]: `%${cleanQuery}%` } }
+        ]
+      }
+    });
+
+    if (clientes.length > 0) return res.json(clientes);
+    return res.status(404).json({ mensajeError: 'Cliente no encontrado' });
+  } catch (error) {
+    res.status(500).json({ mensajeError: error.message });
+  }
+};
+
+// Endpoint: obtener historial de compras de un cliente
+export const OBR_HistorialComprasCliente_CTS = async (req, res) => {
+  try {
+    const clienteId = req.params.id;
+    // Trae ventas + suma total gastado
+    const ventas = await VentasModel.findAll({
+      where: { cliente_id: clienteId },
+      order: [['fecha', 'DESC']],
+      attributes: ['id', 'fecha', 'total'],
+    });
+
+    res.json(ventas);
   } catch (error) {
     res.status(500).json({ mensajeError: error.message });
   }

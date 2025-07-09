@@ -68,7 +68,15 @@ LocalesModel.hasMany(VentasModel, { foreignKey: 'local_id' });
 DetalleVentaModel.belongsTo(VentasModel, { foreignKey: 'venta_id' });
 DetalleVentaModel.belongsTo(StockModel, { foreignKey: 'stock_id' });
 
-VentasModel.hasMany(DetalleVentaModel, { foreignKey: 'venta_id' });
+VentasModel.hasMany(DetalleVentaModel, {
+  foreignKey: 'venta_id',
+  as: 'detalles'
+});
+VentasModel.hasMany(VentaMediosPagoModel, {
+  foreignKey: 'venta_id',
+  as: 'venta_medios_pago' // Usa el nombre que prefieras, pero sé consistente
+});
+
 StockModel.hasMany(DetalleVentaModel, { foreignKey: 'stock_id' });
 
 VentaMediosPagoModel.belongsTo(VentasModel, { foreignKey: 'venta_id' });
