@@ -23,6 +23,11 @@ if (process.env.NODE_ENV !== 'production') {
 export const LocalesModel = db.define(
   'locales',
   {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true
+    },
     nombre: {
       type: DataTypes.STRING(100),
       allowNull: false

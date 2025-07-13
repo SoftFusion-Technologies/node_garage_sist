@@ -41,22 +41,19 @@ export const OBR_Venta_CTS = async (req, res) => {
       include: [
         {
           model: UserModel,
-          as: 'usuario',
           attributes: ['id', 'nombre']
         },
         {
           model: LocalesModel,
-          as: 'local',
           attributes: ['id', 'nombre']
         },
         {
           model: ClienteModel,
-          as: 'cliente',
           attributes: ['id', 'nombre', 'dni']
         },
         {
           model: DetalleVentaModel,
-          as: 'detalles',
+          as: 'detalles', // Este sí tiene alias, porque así está en tu relación
           include: [
             {
               model: StockModel,
@@ -84,6 +81,7 @@ export const OBR_Venta_CTS = async (req, res) => {
     res.status(500).json({ mensajeError: error.message });
   }
 };
+
 
 // Crear una nueva venta
 export const CR_Venta_CTS = async (req, res) => {
