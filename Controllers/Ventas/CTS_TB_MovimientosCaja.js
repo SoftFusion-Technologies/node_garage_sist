@@ -27,6 +27,21 @@ export const OBRS_MovimientosCaja_CTS = async (req, res) => {
   }
 };
 
+// Obtener movimientos de una caja específica
+export const OBRS_MovimientosCajaByCajaId_CTS = async (req, res) => {
+  const { caja_id } = req.params;
+  try {
+    const movimientos = await MovimientosCajaModel.findAll({
+      where: { caja_id }, // 👈 FILTRO POR ID DE CAJA
+      order: [['id', 'DESC']]
+    });
+    res.json(movimientos);
+  } catch (error) {
+    res.status(500).json({ mensajeError: error.message });
+  }
+};
+
+
 // Obtener un movimiento de caja por ID
 export const OBR_MovimientoCaja_CTS = async (req, res) => {
   try {

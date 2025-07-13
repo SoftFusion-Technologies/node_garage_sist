@@ -336,7 +336,8 @@ import {
   OBR_MovimientoCaja_CTS,
   CR_MovimientoCaja_CTS,
   ER_MovimientoCaja_CTS,
-  UR_MovimientoCaja_CTS
+  UR_MovimientoCaja_CTS,
+  OBRS_MovimientosCajaByCajaId_CTS
 } from '../Controllers/Ventas/CTS_TB_MovimientosCaja.js';
 
 // ----------------------------------------------------------------
@@ -348,5 +349,6 @@ router.get('/movimientos_caja/:id', OBR_MovimientoCaja_CTS); // Obtener un movim
 router.post('/movimientos_caja', CR_MovimientoCaja_CTS); // Crear movimiento nuevo
 router.delete('/movimientos_caja/:id', ER_MovimientoCaja_CTS); // Eliminar movimiento por ID
 router.put('/movimientos_caja/:id', UR_MovimientoCaja_CTS); // Actualizar movimiento por ID
+router.get('/movimientos/caja/:caja_id', OBRS_MovimientosCajaByCajaId_CTS); // Actualizar movimiento por ID
 
 export default router;
