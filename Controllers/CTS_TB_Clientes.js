@@ -114,7 +114,7 @@ export const SEARCH_Clientes_CTS = async (req, res) => {
         where: {
           [Op.and]: [
             { dni: cleanQuery },
-            { dni: { [Op.notIn]: ['', 'Sin DNI'] } }   // <--- QUITÁ null
+            { dni: { [Op.notIn]: ['', 'Sin DNI'] } } // <--- QUITÁ null
           ]
         }
       });
@@ -147,7 +147,7 @@ export const OBR_HistorialComprasCliente_CTS = async (req, res) => {
     const ventas = await VentasModel.findAll({
       where: { cliente_id: clienteId },
       order: [['fecha', 'DESC']],
-      attributes: ['id', 'fecha', 'total'],
+      attributes: ['id', 'fecha', 'total']
     });
 
     res.json(ventas);
