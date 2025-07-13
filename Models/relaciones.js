@@ -32,11 +32,13 @@ import { MovimientosCajaModel } from './Ventas/MD_TB_MovimientosCaja.js';
 // RELACIONES MODULO DE VENTAS
 
 // Relaciones de Stock con otras tablas
-StockModel.belongsTo(ProductosModel, { foreignKey: 'producto_id' });
-StockModel.belongsTo(TallesModel, { foreignKey: 'talle_id' });
-StockModel.belongsTo(LocalesModel, { foreignKey: 'local_id' });
+
 StockModel.belongsTo(LugaresModel, { foreignKey: 'lugar_id' });
 StockModel.belongsTo(EstadosModel, { foreignKey: 'estado_id' });
+
+StockModel.belongsTo(ProductosModel, { foreignKey: 'producto_id', as: 'producto' });
+StockModel.belongsTo(TallesModel, { foreignKey: 'talle_id', as: 'talle' });
+StockModel.belongsTo(LocalesModel, { foreignKey: 'local_id', as: 'local' }); // Opcional
 
 // (Opcional) Si más adelante necesitás las relaciones inversas:
 ProductosModel.hasMany(StockModel, { foreignKey: 'producto_id' });
@@ -57,15 +59,21 @@ CategoriasModel.hasMany(ProductosModel, {
 });
 
 // RELACIONES MODULO DE VENTAS
-VentasModel.belongsTo(ClienteModel, { foreignKey: 'cliente_id' });
-VentasModel.belongsTo(UserModel, { foreignKey: 'usuario_id' });
-VentasModel.belongsTo(LocalesModel, { foreignKey: 'local_id' });
+VentasModel.belongsTo(ClienteModel, {
+  foreignKey: 'cliente_id',
+  as: 'cliente'
+}); // <-- AGREGA as
+VentasModel.belongsTo(UserModel, { foreignKey: 'usuario_id', as: 'usuario' }); // <-- AGREGA as
+VentasModel.belongsTo(LocalesModel, { foreignKey: 'local_id', as: 'local' }); // <-- AGREGA as
 
 ClienteModel.hasMany(VentasModel, { foreignKey: 'cliente_id' });
 UserModel.hasMany(VentasModel, { foreignKey: 'usuario_id' });
 LocalesModel.hasMany(VentasModel, { foreignKey: 'local_id' });
 
-DetalleVentaModel.belongsTo(VentasModel, { foreignKey: 'venta_id' });
+DetalleVentaModel.belongsTo(VentasModel, {
+  foreignKey: 'venta_id',
+  as: 'venta'
+}); // Opcional, si querés inversa
 DetalleVentaModel.belongsTo(StockModel, { foreignKey: 'stock_id' });
 
 VentasModel.hasMany(DetalleVentaModel, {

@@ -14,11 +14,13 @@
 import MD_TB_Ventas from '../../Models/Ventas/MD_TB_Ventas.js';
 const VentasModel = MD_TB_Ventas.VentasModel;
 
-// por si queremos joinear joins después:
-// import { ClienteModel } from '';
-// import { UserModel } from '';
-// import { LocalesModel } from '';
-
+import { UserModel } from '../../Models/MD_TB_Users.js';
+import { LocalesModel } from '../../Models/Stock/MD_TB_Locales.js';
+import { ClienteModel } from '../../Models/MD_TB_Clientes.js';
+import { DetalleVentaModel } from '../../Models/Ventas/MD_TB_DetalleVenta.js';
+import { StockModel } from '../../Models/Stock/MD_TB_Stock.js';
+import { ProductosModel } from '../../Models/Stock/MD_TB_Productos.js';
+import { TallesModel } from '../../Models/Stock/MD_TB_Talles.js';
 // Obtener todas las ventas
 export const OBRS_Ventas_CTS = async (req, res) => {
   try {
@@ -35,7 +37,46 @@ export const OBRS_Ventas_CTS = async (req, res) => {
 // Obtener una venta por ID
 export const OBR_Venta_CTS = async (req, res) => {
   try {
-    const venta = await VentasModel.findByPk(req.params.id);
+    const venta = await VentasModel.findByPk(req.params.id, {
+      include: [
+        {
+          model: UserModel,
+          as: 'usuario',
+          attributes: ['id', 'nombre']
+        },
+        {
+          model: LocalesModel,
+          as: 'local',
+          attributes: ['id', 'nombre']
+        },
+        {
+          model: ClienteModel,
+          as: 'cliente',
+          attributes: ['id', 'nombre', 'dni']
+        },
+        {
+          model: DetalleVentaModel,
+          as: 'detalles',
+          include: [
+            {
+              model: StockModel,
+              include: [
+                {
+                  model: ProductosModel,
+                  as: 'producto',
+                  attributes: ['id', 'nombre']
+                },
+                {
+                  model: TallesModel,
+                  as: 'talle',
+                  attributes: ['id', 'nombre']
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
     if (!venta)
       return res.status(404).json({ mensajeError: 'Venta no encontrada' });
     res.json(venta);
