@@ -46,7 +46,7 @@ export const OBR_MedioPago_CTS = async (req, res) => {
 
 // Crear un nuevo medio de pago
 export const CR_MedioPago_CTS = async (req, res) => {
-  const { nombre, descripcion, icono, orden } = req.body;
+  const { nombre, descripcion, icono, orden, ajuste_porcentual } = req.body;
 
   if (!nombre) {
     return res
@@ -59,7 +59,8 @@ export const CR_MedioPago_CTS = async (req, res) => {
       nombre,
       descripcion: descripcion || '',
       icono: icono || '',
-      orden: orden || 0
+      orden: orden || 0,
+      ajuste_porcentual: ajuste_porcentual || 0
     });
 
     res.json({ message: 'Medio de pago creado correctamente', medio: nuevo });

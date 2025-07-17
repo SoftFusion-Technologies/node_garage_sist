@@ -351,4 +351,21 @@ router.delete('/movimientos_caja/:id', ER_MovimientoCaja_CTS); // Eliminar movim
 router.put('/movimientos_caja/:id', UR_MovimientoCaja_CTS); // Actualizar movimiento por ID
 router.get('/movimientos/caja/:caja_id', OBRS_MovimientosCajaByCajaId_CTS); // Actualizar movimiento por ID
 
+import {
+  OBRS_MediosPagoCuotas_CTS,
+  OBR_CuotasPorMedio_CTS,
+  CR_MedioPagoCuota_CTS,
+  UR_MedioPagoCuota_CTS,
+  ER_MedioPagoCuota_CTS
+} from '../Controllers/Ventas/CTS_TB_MediosPagoCuotas.js';
+
+router.get('/cuotas-medios-pago', OBRS_MediosPagoCuotas_CTS);
+router.get('/cuotas-medios-pago/:medio_pago_id', OBR_CuotasPorMedio_CTS);
+router.post('/cuotas-medios-pago', CR_MedioPagoCuota_CTS);
+router.put('/cuotas-medios-pago/:id', UR_MedioPagoCuota_CTS);
+router.delete('/cuotas-medios-pago/:id', ER_MedioPagoCuota_CTS);
+
+import { CALC_TotalFinal_CTS } from '../Controllers/Ventas/CALC_TotalFinal_CTS.js';
+router.post('/calcular-total-final', CALC_TotalFinal_CTS);
+
 export default router;

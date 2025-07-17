@@ -43,6 +43,10 @@ export const MediosPagoModel = db.define(
       type: DataTypes.INTEGER,
       defaultValue: 0
     },
+    ajuste_porcentual: {
+      type: DataTypes.DECIMAL(5, 2),
+      defaultValue: 0
+    },
     created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW
