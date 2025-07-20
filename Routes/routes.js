@@ -368,4 +368,24 @@ router.delete('/cuotas-medios-pago/:id', ER_MedioPagoCuota_CTS);
 import { CALC_TotalFinal_CTS } from '../Controllers/Ventas/CALC_TotalFinal_CTS.js';
 router.post('/calcular-total-final', CALC_TotalFinal_CTS);
 
+import {
+  OBRS_TicketConfig_CTS, // Obtener configuración (única o todas)
+  CR_TicketConfig_CTS, // Crear nueva configuración
+  UR_TicketConfig_CTS, // Actualizar configuración
+  ER_TicketConfig_CTS // Eliminar configuración
+} from '../Controllers/Ventas/CTS_TB_TicketConfig.js';
+
+// GET - Obtener la configuración (por defecto devuelve la única)
+router.get('/ticket-config', OBRS_TicketConfig_CTS);
+
+// POST - Crear nueva configuración (sólo si no existe una)
+router.post('/ticket-config', CR_TicketConfig_CTS);
+
+// PUT - Actualizar configuración (por ID o la única existente)
+// Ejemplo: PUT /api/ticket-config/1
+router.put('/ticket-config/:id', UR_TicketConfig_CTS);
+
+// DELETE - Eliminar configuración por ID (opcional)
+router.delete('/ticket-config/:id', ER_TicketConfig_CTS);
+
 export default router;
