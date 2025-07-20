@@ -95,7 +95,8 @@ app.get('/ventas-historial', async (req, res) => {
 
     const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
 
-    const [rows] = await db.query(`
+    const [rows] = await db.query(
+      `
       SELECT 
         v.id AS venta_id,
         v.fecha,
@@ -110,7 +111,9 @@ app.get('/ventas-historial', async (req, res) => {
       LEFT JOIN locales l ON v.local_id = l.id
       ${where}
       ORDER BY v.fecha DESC
-    `, params);
+    `,
+      params
+    );
 
     res.json(rows);
   } catch (err) {
@@ -118,13 +121,13 @@ app.get('/ventas-historial', async (req, res) => {
   }
 });
 
-
 // GET /ventas/:id/detalle
 app.get('/ventas/:id/detalle', async (req, res) => {
   try {
     const ventaId = req.params.id;
     // Info de la venta principal + joins básicos (si lo deseas)
-    const [info] = await db.query(`
+    const [info] = await db.query(
+      `
       SELECT 
         v.id AS venta_id,
         v.fecha,
@@ -139,7 +142,9 @@ app.get('/ventas/:id/detalle', async (req, res) => {
       LEFT JOIN locales l ON v.local_id = l.id
       WHERE v.id = ?
       LIMIT 1
-    `, [ventaId]);
+    `,
+      [ventaId]
+    );
 
     // Detalle de productos vendidos
     const [detalle] = await db.query(
@@ -170,6 +175,29 @@ app.get('/ventas/:id/detalle', async (req, res) => {
   }
 });
 
+app.get('/ventas-mes', async (req, res) => {
+  try {
+    const sql = `
+      SELECT
+        p.id,
+        p.nombre,
+        COALESCE(SUM(dv.cantidad), 0) AS total_vendido
+      FROM productos p
+      LEFT JOIN stock s ON s.producto_id = p.id
+      LEFT JOIN detalle_venta dv ON dv.stock_id = s.id
+      LEFT JOIN ventas v ON dv.venta_id = v.id
+        AND YEAR(v.fecha) = YEAR(CURRENT_DATE())
+        AND MONTH(v.fecha) = MONTH(CURRENT_DATE())
+      GROUP BY p.id, p.nombre
+      ORDER BY total_vendido DESC, p.nombre ASC
+    `;
+    const [rows] = await pool.query(sql);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error al obtener productos vendidos del mes:', error);
+    res.status(500).json({ mensajeError: 'Error interno al obtener datos' });
+  }
+});
 
 if (!PORT) {
   console.error('El puerto no está definido en el archivo de configuración.');
