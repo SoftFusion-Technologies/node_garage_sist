@@ -361,23 +361,64 @@ export const TRANSFERIR_Stock_CTS = async (req, res) => {
   }
 };
 
+import { DetalleVentaModel } from '../../Models/Ventas/MD_TB_DetalleVenta.js';
+
 // Elimina TODO el stock del grupo
+
 export const ER_StockPorGrupo = async (req, res) => {
   const { producto_id, local_id, lugar_id, estado_id } = req.body;
   if (!producto_id || !local_id || !lugar_id || !estado_id) {
     return res.status(400).json({ mensajeError: 'Datos incompletos' });
   }
   try {
-    await StockModel.destroy({
-      where: {
-        producto_id,
-        local_id,
-        lugar_id,
-        estado_id,
-      },
+    // 1. Buscar stocks del grupo
+    const stocksGrupo = await StockModel.findAll({
+      where: { producto_id, local_id, lugar_id, estado_id },
+      attributes: ['id', 'cantidad']
     });
-    res.json({ message: 'Todo el stock del grupo eliminado' });
+    if (!stocksGrupo.length) {
+      return res
+        .status(404)
+        .json({ mensajeError: 'No existe ningún stock en ese grupo.' });
+    }
+    const stockIds = stocksGrupo.map((s) => s.id);
+
+    // 2. Validar ventas asociadas en detalle_venta
+    const ventaAsociada = await DetalleVentaModel.findOne({
+      where: { stock_id: stockIds }
+    });
+    if (ventaAsociada) {
+      return res.status(409).json({
+        mensajeError:
+          'No se puede eliminar este grupo de stock porque está vinculado a ventas.'
+      });
+    }
+
+    // 3. Validar stock en positivo
+    if (stocksGrupo.some((s) => s.cantidad > 0)) {
+      return res.status(409).json({
+        mensajeError:
+          'No se puede eliminar: aún hay stock disponible en el grupo.'
+      });
+    }
+
+    // 4. Eliminar
+    await StockModel.destroy({
+      where: { producto_id, local_id, lugar_id, estado_id }
+    });
+
+    return res.json({ message: 'Grupo de stock eliminado exitosamente.' });
   } catch (error) {
-    res.status(500).json({ mensajeError: error.message });
+    let mensaje = 'Error interno. ';
+    if (
+      error?.name === 'SequelizeForeignKeyConstraintError' ||
+      (error?.parent && error.parent.code === 'ER_ROW_IS_REFERENCED_2')
+    ) {
+      mensaje =
+        'No se puede eliminar este grupo de stock porque tiene registros relacionados (ventas u otros movimientos).';
+    }
+    return res
+      .status(500)
+      .json({ mensajeError: mensaje + (error.message || '') });
   }
 };
