@@ -71,6 +71,11 @@ export const VentasModel = db.define(
     recargo_porcentaje: {
       type: DataTypes.DECIMAL(5, 2),
       defaultValue: 0
+    },
+    aplicar_descuento: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true
     }
   },
   {
