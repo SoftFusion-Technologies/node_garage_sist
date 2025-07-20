@@ -68,7 +68,20 @@ app.get('/', (req, res) => {
 // GET /ventas-historial?desde=2025-07-01&hasta=2025-07-31&local=1&vendedor=3&cliente=5
 app.get('/ventas-historial', async (req, res) => {
   try {
-    const { desde, hasta, local, vendedor, cliente } = req.query;
+    const {
+      desde,
+      hasta,
+      local,
+      vendedor,
+      cliente,
+      page = 1,
+      limit = 10
+    } = req.query;
+
+    const limitNum = Number(limit);
+    const pageNum = Number(page);
+    const offsetNum = (pageNum - 1) * limitNum;
+
     let filtros = [];
     let params = [];
 
@@ -95,8 +108,15 @@ app.get('/ventas-historial', async (req, res) => {
 
     const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
 
-    const [rows] = await db.query(
-      `
+    // Consulta total registros para paginación
+    const [countResult] = await db.query(
+      `SELECT COUNT(*) AS total FROM ventas v ${where}`,
+      params
+    );
+    const total = countResult[0].total;
+
+    // Consulta con limit y offset interpolados para evitar error
+    const query = `
       SELECT 
         v.id AS venta_id,
         v.fecha,
@@ -111,15 +131,22 @@ app.get('/ventas-historial', async (req, res) => {
       LEFT JOIN locales l ON v.local_id = l.id
       ${where}
       ORDER BY v.fecha DESC
-    `,
-      params
-    );
+      LIMIT ${limitNum} OFFSET ${offsetNum}
+    `;
 
-    res.json(rows);
+    const [rows] = await db.query(query, params);
+
+    res.json({
+      total,
+      page: pageNum,
+      limit: limitNum,
+      ventas: rows
+    });
   } catch (err) {
     res.status(500).json({ mensajeError: err.message });
   }
 });
+
 
 // GET /ventas/:id/detalle
 app.get('/ventas/:id/detalle', async (req, res) => {
