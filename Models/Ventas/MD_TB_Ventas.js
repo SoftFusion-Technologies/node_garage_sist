@@ -63,6 +63,14 @@ export const VentasModel = db.define(
       type: DataTypes.STRING(20),
       allowNull: false,
       defaultValue: 'confirmada'
+    },
+    descuento_porcentaje: {
+      type: DataTypes.DECIMAL(5, 2),
+      defaultValue: 0
+    },
+    recargo_porcentaje: {
+      type: DataTypes.DECIMAL(5, 2),
+      defaultValue: 0
     }
   },
   {

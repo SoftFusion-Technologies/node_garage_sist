@@ -154,35 +154,49 @@ export const buscarItemsVentaDetallado = async (req, res) => {
 
 // Registrar una venta completa
 export const registrarVenta = async (req, res) => {
-  const { cliente_id, productos, total, medio_pago_id, usuario_id, local_id } =
-    req.body;
+  const {
+    cliente_id,
+    productos,
+    total,
+    medio_pago_id,
+    usuario_id,
+    local_id,
+    descuento_porcentaje = 0,
+    recargo_porcentaje = 0
+  } = req.body;
 
-  // 1. Validaciones previas de inputs
+  // Validaciones básicas
   if (!Array.isArray(productos) || productos.length === 0)
-    return res
-      .status(400)
-      .json({ mensajeError: 'No hay productos en el carrito' });
+    return res.status(400).json({ mensajeError: 'No hay productos en el carrito' });
 
   if (!usuario_id || !local_id)
-    return res
-      .status(400)
-      .json({ mensajeError: 'Usuario o local no informado' });
+    return res.status(400).json({ mensajeError: 'Usuario o local no informado' });
 
   if (!medio_pago_id)
-    return res
-      .status(400)
-      .json({ mensajeError: 'Medio de pago no seleccionado' });
+    return res.status(400).json({ mensajeError: 'Medio de pago no seleccionado' });
 
   if (!total || total <= 0)
     return res.status(400).json({ mensajeError: 'Total inválido' });
 
+  // Validar porcentajes (asegurar no negativos)
+  const descuento = Number(descuento_porcentaje);
+  const recargo = Number(recargo_porcentaje);
+  if (descuento < 0 || recargo < 0)
+    return res.status(400).json({ mensajeError: 'Porcentajes inválidos' });
+
+  // Calculamos total ajustado
+  let totalFinal = total;
+  if (descuento > 0) {
+    totalFinal = totalFinal * (1 - descuento / 100);
+  }
+  if (recargo > 0) {
+    totalFinal = totalFinal * (1 + recargo / 100);
+  }
+  totalFinal = Math.round(totalFinal * 100) / 100;
+
   const t = await db.transaction();
   try {
-    // 2. Validar usuario, local y caja activa
-    // (Agregá tus validaciones reales si tenés esos modelos)
-    // Ejemplo: const usuario = await UsuarioModel.findByPk(usuario_id);
-    // if (!usuario || usuario.estado !== 'activo') throw new Error("Usuario no válido");
-
+    // Validar caja abierta
     const cajaAbierta = await CajaModel.findOne({
       where: { local_id, usuario_id, fecha_cierre: null },
       transaction: t
@@ -190,32 +204,32 @@ export const registrarVenta = async (req, res) => {
     if (!cajaAbierta)
       throw new Error('No hay caja abierta para este usuario/local');
 
-    // 3. Validar stock antes de seguir
+    // Validar stock
     for (let p of productos) {
       const stock = await StockModel.findByPk(p.stock_id, { transaction: t });
       if (!stock) throw new Error(`Producto no encontrado (ID: ${p.stock_id})`);
       if (stock.cantidad < p.cantidad) {
         throw new Error(
-          `Stock insuficiente para "${
-            stock.nombre || p.stock_id
-          }". Disponible: ${stock.cantidad}`
+          `Stock insuficiente para "${stock.nombre || p.stock_id}". Disponible: ${stock.cantidad}`
         );
       }
     }
 
-    // 4. Registrar venta principal
+    // Crear venta con total ajustado
     const venta = await VentasModel.create(
       {
         cliente_id: cliente_id || null,
         usuario_id,
         local_id,
-        total,
+        total: totalFinal,
+        descuento_porcentaje: descuento,
+        recargo_porcentaje: recargo,
         estado: 'confirmada'
       },
       { transaction: t }
     );
 
-    // 5. Registrar detalle de venta y restar stock
+    // Registrar detalle de venta y restar stock
     for (let p of productos) {
       await DetalleVentaModel.create(
         {
@@ -227,35 +241,34 @@ export const registrarVenta = async (req, res) => {
         { transaction: t }
       );
 
-      // Restar stock
       const stock = await StockModel.findByPk(p.stock_id, { transaction: t });
       stock.cantidad -= p.cantidad;
       await stock.save({ transaction: t });
     }
 
-    // 6. Registrar medio de pago (puedes agregar array si soportás multi-medio)
+    // Registrar medio de pago
     await VentaMediosPagoModel.create(
       {
         venta_id: venta.id,
         medio_pago_id,
-        monto: total
+        monto: totalFinal
       },
       { transaction: t }
     );
 
-    // 7. Registrar movimiento en caja
+    // Registrar movimiento en caja
     await MovimientosCajaModel.create(
       {
         caja_id: cajaAbierta.id,
         tipo: 'ingreso',
         descripcion: `Venta #${venta.id}`,
-        monto: total,
-        referencia: String(venta.id) // <-- SOLO el número
+        monto: totalFinal,
+        referencia: String(venta.id)
       },
       { transaction: t }
     );
 
-    // 8. Actualizar última compra del cliente
+    // Actualizar última compra del cliente
     if (cliente_id) {
       await ClienteModel.update(
         { fecha_ultima_compra: new Date() },
@@ -265,11 +278,12 @@ export const registrarVenta = async (req, res) => {
 
     await t.commit();
 
-    // 9. Devuelve resumen de venta (puedes incluir productos, cliente, total, etc.)
     res.status(201).json({
       message: 'Venta registrada correctamente',
       venta_id: venta.id,
-      total,
+      total: totalFinal,
+      descuento_porcentaje: descuento,
+      recargo_porcentaje: recargo,
       cliente_id: venta.cliente_id,
       productos,
       medio_pago_id,
@@ -277,12 +291,11 @@ export const registrarVenta = async (req, res) => {
     });
   } catch (error) {
     await t.rollback();
-    console.error('[Error en registrarVenta]', error); // Log para debug real
-    res
-      .status(500)
-      .json({ mensajeError: error.message || 'Error al registrar la venta' });
+    console.error('[Error en registrarVenta]', error);
+    res.status(500).json({ mensajeError: error.message || 'Error al registrar la venta' });
   }
 };
+
 
 // controllers/ventasController.js
 export const OBR_VentaDetalle_CTS = async (req, res) => {
