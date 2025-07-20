@@ -13,6 +13,8 @@
 // Importar el modelo
 import MD_TB_Clientes from '../Models/MD_TB_Clientes.js';
 import { VentasModel } from '../Models/Ventas/MD_TB_Ventas.js';
+import { DetalleVentaModel } from '../Models/Ventas/MD_TB_DetalleVenta.js';
+
 const ClienteModel = MD_TB_Clientes.ClienteModel;
 import { Op } from 'sequelize';
 
@@ -66,13 +68,35 @@ export const CR_Cliente_CTS = async (req, res) => {
 
 // Eliminar un cliente
 export const ER_Cliente_CTS = async (req, res) => {
+  const clienteId = req.params.id;
+
   try {
-    const eliminado = await ClienteModel.destroy({
-      where: { id: req.params.id }
+    const ventasCliente = await VentasModel.findAll({
+      where: { cliente_id: clienteId },
+      attributes: ['id']
     });
 
-    if (!eliminado)
+    if (ventasCliente.length > 0) {
+      const ventaIds = ventasCliente.map((v) => v.id);
+      const detalleRelacionado = await DetalleVentaModel.findOne({
+        where: { venta_id: { [Op.in]: ventaIds } }
+      });
+
+      if (detalleRelacionado) {
+        return res.status(409).json({
+          mensajeError:
+            'No se puede eliminar el cliente porque tiene ventas asociadas.'
+        });
+      }
+    }
+
+    const eliminado = await ClienteModel.destroy({
+      where: { id: clienteId }
+    });
+
+    if (!eliminado) {
       return res.status(404).json({ mensajeError: 'Cliente no encontrado' });
+    }
 
     res.json({ message: 'Cliente eliminado correctamente' });
   } catch (error) {
