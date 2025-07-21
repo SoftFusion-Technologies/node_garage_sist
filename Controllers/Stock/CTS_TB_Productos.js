@@ -54,15 +54,33 @@ export const OBR_Producto_CTS = async (req, res) => {
 
 // Crear un nuevo producto
 export const CR_Producto_CTS = async (req, res) => {
-  const { nombre, descripcion, categoria_id, precio, imagen_url, estado } =
-    req.body;
+  const {
+    nombre,
+    descripcion,
+    categoria_id,
+    precio,
+    descuento_porcentaje,
+    imagen_url,
+    estado
+  } = req.body;
 
   try {
+    const precioNum = precio ? parseFloat(precio) : 0;
+    const descuentoNum = descuento_porcentaje
+      ? parseFloat(descuento_porcentaje)
+      : 0;
+    const precioConDescuento =
+      descuentoNum > 0
+        ? parseFloat((precioNum - precioNum * (descuentoNum / 100)).toFixed(2))
+        : precioNum;
+
     const nuevo = await ProductosModel.create({
       nombre,
       descripcion,
       categoria_id,
-      precio: parseFloat(precio),
+      precio: precioNum,
+      descuento_porcentaje: descuentoNum > 0 ? descuentoNum : null,
+      precio_con_descuento: precioConDescuento,
       imagen_url,
       estado
     });
@@ -73,6 +91,7 @@ export const CR_Producto_CTS = async (req, res) => {
     res.status(500).json({ mensajeError: error.message });
   }
 };
+
 
 // Eliminar un producto si no tiene stock
 export const ER_Producto_CTS = async (req, res) => {
@@ -101,28 +120,46 @@ export const ER_Producto_CTS = async (req, res) => {
 };
 
 // Actualizar un producto
+
 export const UR_Producto_CTS = async (req, res) => {
   const { id } = req.params;
+  const {
+    nombre,
+    descripcion,
+    categoria_id,
+    precio,
+    descuento_porcentaje,
+    imagen_url,
+    estado
+  } = req.body;
 
   try {
-    const [updated] = await ProductosModel.update(req.body, {
-      where: { id }
-    });
+    const precioNum = precio ? parseFloat(precio) : 0;
+    const descuentoNum = descuento_porcentaje
+      ? parseFloat(descuento_porcentaje)
+      : 0;
+    const precioConDescuento =
+      descuentoNum > 0
+        ? parseFloat((precioNum - precioNum * (descuentoNum / 100)).toFixed(2))
+        : precioNum;
 
-    if (updated === 1) {
-      const actualizado = await ProductosModel.findByPk(id, {
-        include: {
-          model: CategoriasModel,
-          as: 'categoria',
-          attributes: ['id', 'nombre']
-        }
-      });
+    await ProductosModel.update(
+      {
+        nombre,
+        descripcion,
+        categoria_id,
+        precio: precioNum,
+        descuento_porcentaje: descuentoNum > 0 ? descuentoNum : null,
+        precio_con_descuento: precioConDescuento,
+        imagen_url,
+        estado
+      },
+      { where: { id } }
+    );
 
-      res.json({ message: 'Producto actualizado correctamente', actualizado });
-    } else {
-      res.status(404).json({ mensajeError: 'Producto no encontrado' });
-    }
+    res.json({ message: 'Producto actualizado correctamente' });
   } catch (error) {
+    console.error('❌ Error en UP_Producto_CTS:', error);
     res.status(500).json({ mensajeError: error.message });
   }
 };

@@ -43,6 +43,16 @@ export const ProductosModel = db.define(
       type: DataTypes.DECIMAL(18, 2),
       defaultValue: 0.0
     },
+    descuento_porcentaje: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true,
+      defaultValue: null
+    },
+    precio_con_descuento: {
+      type: DataTypes.DECIMAL(18, 2),
+      allowNull: true,
+      defaultValue: null
+    },
     imagen_url: {
       type: DataTypes.STRING(255),
       allowNull: true
