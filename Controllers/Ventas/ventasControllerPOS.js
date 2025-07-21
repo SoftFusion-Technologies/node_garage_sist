@@ -108,6 +108,7 @@ export const buscarItemsVentaAgrupado = async (req, res) => {
 /** 3. Búsqueda detallada con talles y stock para selección exacta */
 export const buscarItemsVentaDetallado = async (req, res) => {
   const { query } = req.query;
+  const isNumeric = query && !isNaN(Number(query)); // True si el query es número
 
   try {
     const items = await StockModel.findAll({
@@ -115,7 +116,13 @@ export const buscarItemsVentaDetallado = async (req, res) => {
         cantidad: { [Op.gt]: 0 },
         [Op.or]: [
           { codigo_sku: { [Op.like]: `%${query}%` } },
-          { '$producto.nombre$': { [Op.like]: `%${query}%` } }
+          { '$producto.nombre$': { [Op.like]: `%${query}%` } },
+          ...(isNumeric
+            ? [
+                { '$producto.id$': Number(query) },
+                { id: Number(query) } // id de Stock
+              ]
+            : [])
         ]
       },
       include: [
@@ -151,6 +158,7 @@ export const buscarItemsVentaDetallado = async (req, res) => {
     res.status(500).json({ message: 'Error en búsqueda detallada' });
   }
 };
+
 
 // Registrar una venta completa
 export const registrarVenta = async (req, res) => {
