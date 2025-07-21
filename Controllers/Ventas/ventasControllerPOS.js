@@ -129,7 +129,13 @@ export const buscarItemsVentaDetallado = async (req, res) => {
         {
           model: ProductosModel,
           as: 'producto',
-          attributes: ['id', 'nombre', 'precio']
+          attributes: [
+            'id',
+            'nombre',
+            'precio',
+            'descuento_porcentaje',
+            'precio_con_descuento'
+          ] // Agregados
         },
         {
           model: TallesModel,
@@ -146,6 +152,12 @@ export const buscarItemsVentaDetallado = async (req, res) => {
       producto_id: s.producto.id,
       nombre: s.producto.nombre,
       precio: parseFloat(s.producto.precio),
+      descuento_porcentaje: s.producto.descuento_porcentaje
+        ? parseFloat(s.producto.descuento_porcentaje)
+        : 0,
+      precio_con_descuento: s.producto.precio_con_descuento
+        ? parseFloat(s.producto.precio_con_descuento)
+        : parseFloat(s.producto.precio),
       talle_id: s.talle_id,
       talle_nombre: s.talle?.nombre || 'Sin talle',
       cantidad_disponible: s.cantidad,
@@ -158,7 +170,6 @@ export const buscarItemsVentaDetallado = async (req, res) => {
     res.status(500).json({ message: 'Error en búsqueda detallada' });
   }
 };
-
 
 // Registrar una venta completa
 export const registrarVenta = async (req, res) => {
@@ -258,7 +269,11 @@ export const registrarVenta = async (req, res) => {
           venta_id: venta.id,
           stock_id: p.stock_id,
           cantidad: p.cantidad,
-          precio_unitario: p.precio_unitario
+          precio_unitario: p.precio_unitario,
+          descuento: p.descuento || 0,
+          descuento_porcentaje: p.descuento_porcentaje || 0,
+          precio_unitario_con_descuento:
+            p.precio_unitario_con_descuento || p.precio_unitario
         },
         { transaction: t }
       );
@@ -318,7 +333,6 @@ export const registrarVenta = async (req, res) => {
   }
 };
 
-
 // controllers/ventasController.js
 export const OBR_VentaDetalle_CTS = async (req, res) => {
   try {
@@ -330,30 +344,16 @@ export const OBR_VentaDetalle_CTS = async (req, res) => {
           include: [
             {
               model: StockModel,
-              include: [
-                {
-                  model: ProductosModel
-                  // podés agregar attributes: ['nombre', ...] si querés limitar
-                },
-                {
-                  model: TallesModel
-                }
-              ]
+              include: [{ model: ProductosModel }, { model: TallesModel }]
             }
           ]
         },
-        {
-          model: ClienteModel
-        },
-        {
-          model: UserModel
-        },
-        {
-          model: LocalesModel
-        },
+        { model: ClienteModel },
+        { model: UserModel },
+        { model: LocalesModel },
         {
           model: VentaMediosPagoModel,
-          as: 'venta_medios_pago', // <--- alias igual que el de la relación
+          as: 'venta_medios_pago',
           include: [{ model: MediosPagoModel }]
         }
       ]
@@ -361,7 +361,36 @@ export const OBR_VentaDetalle_CTS = async (req, res) => {
 
     if (!venta)
       return res.status(404).json({ mensajeError: 'Venta no encontrada' });
-    res.json(venta);
+
+    // Calcular subtotal sin descuentos
+    let totalSinDescuento = 0;
+    let descuentoProducto = 0;
+    let descuentoCarrito = 0; // si tienes descuentos aplicados en carrito
+    let descuentoMedioPago = 0; // si tienes descuentos aplicados por medio de pago
+
+    for (const detalle of venta.detalles) {
+      const precioBase = detalle.precio_unitario * detalle.cantidad;
+      totalSinDescuento += precioBase;
+      // Aquí puedes calcular descuentos específicos por detalle si guardas ese dato
+      // Por ejemplo, si detalle.descuento existe
+      if (detalle.descuento) {
+        descuentoProducto += detalle.descuento * detalle.cantidad;
+      }
+    }
+
+    // Suponiendo que tienes campos en venta para descuentos de carrito y medio pago
+    descuentoCarrito = venta.descuento_carrito || 0;
+    descuentoMedioPago = venta.descuento_medio_pago || 0;
+
+    const respuesta = {
+      ...venta.toJSON(),
+      total_sin_descuentos: totalSinDescuento,
+      total_descuento_producto: descuentoProducto,
+      total_descuento_carrito: descuentoCarrito,
+      total_descuento_medio_pago: descuentoMedioPago
+    };
+
+    res.json(respuesta);
   } catch (error) {
     res.status(500).json({ mensajeError: error.message });
   }

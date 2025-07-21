@@ -52,6 +52,11 @@ export const DetalleVentaModel = db.define(
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       defaultValue: 0
+    },
+    descuento_porcentaje: { type: DataTypes.DECIMAL(5, 2), defaultValue: 0 },
+    precio_unitario_con_descuento: {
+      type: DataTypes.DECIMAL(18, 2),
+      allowNull: true
     }
   },
   {
