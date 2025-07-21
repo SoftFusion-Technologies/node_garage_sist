@@ -187,8 +187,15 @@ export const registrarVenta = async (req, res) => {
 
   const descuento = Number(descuento_porcentaje);
   const recargo = Number(recargo_porcentaje);
-  if (descuento < 0 || recargo < 0)
-    return res.status(400).json({ mensajeError: 'Porcentajes inválidos' });
+
+  if (isNaN(descuento) || descuento < 0 || descuento > 100)
+    return res
+      .status(400)
+      .json({ mensajeError: 'Porcentaje de descuento inválido (0-100)' });
+  if (isNaN(recargo) || recargo < 0 || recargo > 100)
+    return res
+      .status(400)
+      .json({ mensajeError: 'Porcentaje de recargo inválido (0-100)' });
 
   // Calculamos total ajustado solo si aplicar_descuento es true
   let totalFinal = total;
