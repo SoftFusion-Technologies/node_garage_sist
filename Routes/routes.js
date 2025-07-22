@@ -388,4 +388,18 @@ router.put('/ticket-config/:id', UR_TicketConfig_CTS);
 // DELETE - Eliminar configuración por ID (opcional)
 router.delete('/ticket-config/:id', ER_TicketConfig_CTS);
 
+import {
+  OBRS_VentaDescuentos_CTS,
+  OBR_VentaDescuento_CTS,
+  CR_VentaDescuento_CTS,
+  ER_VentaDescuento_CTS,
+  UR_VentaDescuento_CTS
+} from '../Controllers/Ventas/CTS_TB_VentaDescuentos.js';
+
+router.get('/venta-descuento', OBRS_VentaDescuentos_CTS); // ?venta_id=123
+router.get('/venta-descuento/:id', OBR_VentaDescuento_CTS);
+router.post('/venta-descuento', CR_VentaDescuento_CTS);
+router.delete('/venta-descuento/:id', ER_VentaDescuento_CTS);
+router.put('/venta-descuento/:id', UR_VentaDescuento_CTS);
+
 export default router;
