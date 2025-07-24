@@ -14,7 +14,7 @@
 import dotenv from 'dotenv';
 import db from '../../DataBase/db.js';
 import { DataTypes } from 'sequelize';
-
+import { VentasModel } from './MD_TB_Ventas.js';
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
 }
@@ -68,6 +68,9 @@ export const VentaDescuentosModel = db.define(
   }
 );
 
+VentaDescuentosModel.belongsTo(VentasModel, {
+  foreignKey: 'venta_id'
+});
 
 export default {
   VentaDescuentosModel

@@ -16,6 +16,8 @@ import { MovimientosCajaModel } from '../../Models/Ventas/MD_TB_MovimientosCaja.
 import { UserModel } from '../../Models/MD_TB_Users.js';
 import { LocalesModel } from '../../Models/Stock/MD_TB_Locales.js';
 import { MediosPagoModel } from '../../Models/Ventas/MD_TB_MediosPago.js';
+import { VentaDescuentosModel } from '../../Models/Ventas/MD_TB_VentaDescuentos.js';
+
 /** 1. Búsqueda simple por SKU o nombre, sin agrupación (detalle por talle) */
 export const buscarItemsVenta = async (req, res) => {
   const { query } = req.query;
@@ -182,7 +184,8 @@ export const registrarVenta = async (req, res) => {
     local_id,
     descuento_porcentaje = 0,
     recargo_porcentaje = 0,
-    aplicar_descuento = true // <-- Nuevo parámetro para aplicar o no ajustes
+    aplicar_descuento = true, // <-- Nuevo parámetro para aplicar o no ajustes
+    origenes_descuento = []
   } = req.body;
 
   // Validaciones básicas
@@ -292,6 +295,27 @@ export const registrarVenta = async (req, res) => {
       { transaction: t }
     );
 
+    console.log(origenes_descuento)
+    // Insertar origenes de descuento (si existen)
+    if (Array.isArray(origenes_descuento) && origenes_descuento.length > 0) {
+      for (const d of origenes_descuento) {
+        // Validación básica
+        if (!['producto', 'medio_pago', 'manual'].includes(d.tipo)) continue;
+
+        await VentaDescuentosModel.create(
+          {
+            venta_id: venta.id,
+            tipo: d.tipo,
+            referencia_id: d.referencia_id ?? null,
+            detalle: d.detalle ?? '',
+            porcentaje: Number(d.porcentaje ?? 0),
+            monto: Number(d.monto ?? 0)
+          },
+          { transaction: t }
+        );
+      }
+    }
+
     await MovimientosCajaModel.create(
       {
         caja_id: cajaAbierta.id,
@@ -336,28 +360,33 @@ export const registrarVenta = async (req, res) => {
 // controllers/ventasController.js
 export const OBR_VentaDetalle_CTS = async (req, res) => {
   try {
-    const venta = await VentasModel.findByPk(req.params.id, {
-      include: [
-        {
-          model: DetalleVentaModel,
-          as: 'detalles',
-          include: [
-            {
-              model: StockModel,
-              include: [{ model: ProductosModel }, { model: TallesModel }]
-            }
-          ]
-        },
-        { model: ClienteModel },
-        { model: UserModel },
-        { model: LocalesModel },
-        {
-          model: VentaMediosPagoModel,
-          as: 'venta_medios_pago',
-          include: [{ model: MediosPagoModel }]
-        }
-      ]
-    });
+ const venta = await VentasModel.findByPk(req.params.id, {
+   include: [
+     {
+       model: DetalleVentaModel,
+       as: 'detalles',
+       include: [
+         {
+           model: StockModel,
+           include: [{ model: ProductosModel }, { model: TallesModel }]
+         }
+       ]
+     },
+     { model: ClienteModel },
+     { model: UserModel },
+     { model: LocalesModel },
+     {
+       model: VentaMediosPagoModel,
+       as: 'venta_medios_pago',
+       include: [{ model: MediosPagoModel }]
+     },
+     {
+       model: VentaDescuentosModel,
+       as: 'descuentos' // 👈 Agregado
+     }
+   ]
+ });
+
 
     if (!venta)
       return res.status(404).json({ mensajeError: 'Venta no encontrada' });

@@ -28,7 +28,7 @@ import { VentaMediosPagoModel } from './Ventas/MD_TB_VentaMediosPago.js';
 import { MediosPagoModel } from './Ventas/MD_TB_MediosPago.js';
 import { CajaModel } from './Ventas/MD_TB_Caja.js';
 import { MovimientosCajaModel } from './Ventas/MD_TB_MovimientosCaja.js';
-
+import { VentaDescuentosModel } from './Ventas/MD_TB_VentaDescuentos.js';
 // RELACIONES MODULO DE VENTAS
 
 // Relaciones de Stock con otras tablas
@@ -92,3 +92,8 @@ CajaModel.belongsTo(UserModel, { foreignKey: 'usuario_id' });
 MovimientosCajaModel.belongsTo(CajaModel, { foreignKey: 'caja_id' });
 
 // RELACIONES MODULO DE VENTAS
+
+VentasModel.hasMany(VentaDescuentosModel, {
+  foreignKey: 'venta_id',
+  as: 'descuentos'
+});
