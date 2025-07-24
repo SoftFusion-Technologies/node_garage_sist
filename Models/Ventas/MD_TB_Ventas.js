@@ -76,6 +76,31 @@ export const VentasModel = db.define(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true
+    },
+    cuotas: {
+      type: DataTypes.INTEGER,
+      defaultValue: 1
+    },
+    monto_por_cuota: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true
+    },
+    porcentaje_recargo_cuotas: {
+      type: DataTypes.DECIMAL(5, 2),
+      defaultValue: 0
+    },
+    diferencia_redondeo: {
+      type: DataTypes.DECIMAL(10, 2),
+      defaultValue: 0
+    },
+    precio_base: {
+      type: DataTypes.DECIMAL(18, 2),
+      allowNull: false,
+      defaultValue: 0.0
+    },
+    recargo_monto_cuotas: {
+      type: DataTypes.DECIMAL(18, 2),
+      defaultValue: 0.0
     }
   },
   {
@@ -86,6 +111,7 @@ export const VentasModel = db.define(
 );
 
 // (Opcional) Relaciones por fuera del modelo principal, se definen en relaciones.js
+
 
 export default {
   VentasModel

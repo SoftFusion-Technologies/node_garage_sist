@@ -97,3 +97,4 @@ VentasModel.hasMany(VentaDescuentosModel, {
   foreignKey: 'venta_id',
   as: 'descuentos'
 });
+

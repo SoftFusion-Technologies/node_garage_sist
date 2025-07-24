@@ -21,6 +21,7 @@ import { DetalleVentaModel } from '../../Models/Ventas/MD_TB_DetalleVenta.js';
 import { StockModel } from '../../Models/Stock/MD_TB_Stock.js';
 import { ProductosModel } from '../../Models/Stock/MD_TB_Productos.js';
 import { TallesModel } from '../../Models/Stock/MD_TB_Talles.js';
+import { VentaDescuentosModel } from '../../Models/Ventas/MD_TB_VentaDescuentos.js';
 // Obtener todas las ventas
 export const OBRS_Ventas_CTS = async (req, res) => {
   try {
@@ -53,7 +54,17 @@ export const OBR_Venta_CTS = async (req, res) => {
         },
         {
           model: DetalleVentaModel,
-          as: 'detalles', // Este sí tiene alias, porque así está en tu relación
+          as: 'detalles',
+          attributes: [
+            'id',
+            'venta_id',
+            'stock_id',
+            'cantidad',
+            'precio_unitario',
+            'descuento',
+            'descuento_porcentaje',
+            'precio_unitario_con_descuento'
+          ],
           include: [
             {
               model: StockModel,
@@ -61,7 +72,7 @@ export const OBR_Venta_CTS = async (req, res) => {
                 {
                   model: ProductosModel,
                   as: 'producto',
-                  attributes: ['id', 'nombre']
+                  attributes: ['id', 'nombre', 'precio']
                 },
                 {
                   model: TallesModel,
@@ -71,17 +82,24 @@ export const OBR_Venta_CTS = async (req, res) => {
               ]
             }
           ]
+        },
+        {
+          model: VentaDescuentosModel,
+          as: 'descuentos'
         }
       ]
     });
-    if (!venta)
+
+    if (!venta) {
       return res.status(404).json({ mensajeError: 'Venta no encontrada' });
+    }
+
     res.json(venta);
   } catch (error) {
+    console.error('Error al obtener venta:', error);
     res.status(500).json({ mensajeError: error.message });
   }
 };
-
 
 // Crear una nueva venta
 export const CR_Venta_CTS = async (req, res) => {

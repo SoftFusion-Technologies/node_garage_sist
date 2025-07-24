@@ -185,7 +185,13 @@ export const registrarVenta = async (req, res) => {
     descuento_porcentaje = 0,
     recargo_porcentaje = 0,
     aplicar_descuento = true, // <-- Nuevo parámetro para aplicar o no ajustes
-    origenes_descuento = []
+    origenes_descuento = [],
+    cuotas = 1,
+    monto_por_cuota = null,
+    porcentaje_recargo_cuotas = 0,
+    diferencia_redondeo = 0,
+    precio_base = 0,
+    recargo_monto_cuotas = 0
   } = req.body;
 
   // Validaciones básicas
@@ -219,17 +225,8 @@ export const registrarVenta = async (req, res) => {
       .status(400)
       .json({ mensajeError: 'Porcentaje de recargo inválido (0-100)' });
 
-  // Calculamos total ajustado solo si aplicar_descuento es true
-  let totalFinal = total;
-  if (aplicar_descuento) {
-    if (descuento > 0) {
-      totalFinal = totalFinal * (1 - descuento / 100);
-    }
-    if (recargo > 0) {
-      totalFinal = totalFinal * (1 + recargo / 100);
-    }
-  }
-  totalFinal = Math.round(totalFinal * 100) / 100;
+  // No recalculamos nada: el total ya viene final del frontend
+  let totalFinal = parseFloat(total);
 
   const t = await db.transaction();
   try {
@@ -261,7 +258,14 @@ export const registrarVenta = async (req, res) => {
         descuento_porcentaje: aplicar_descuento ? descuento : 0,
         recargo_porcentaje: aplicar_descuento ? recargo : 0,
         aplicar_descuento, // Guardamos si se aplicó o no
-        estado: 'confirmada'
+        estado: 'confirmada',
+        // 🔽 Nuevos campos añadidos
+        cuotas,
+        monto_por_cuota,
+        porcentaje_recargo_cuotas,
+        diferencia_redondeo,
+        precio_base,
+        recargo_monto_cuotas
       },
       { transaction: t }
     );
@@ -295,7 +299,7 @@ export const registrarVenta = async (req, res) => {
       { transaction: t }
     );
 
-    console.log(origenes_descuento)
+    console.log(origenes_descuento);
     // Insertar origenes de descuento (si existen)
     if (Array.isArray(origenes_descuento) && origenes_descuento.length > 0) {
       for (const d of origenes_descuento) {
@@ -360,33 +364,32 @@ export const registrarVenta = async (req, res) => {
 // controllers/ventasController.js
 export const OBR_VentaDetalle_CTS = async (req, res) => {
   try {
- const venta = await VentasModel.findByPk(req.params.id, {
-   include: [
-     {
-       model: DetalleVentaModel,
-       as: 'detalles',
-       include: [
-         {
-           model: StockModel,
-           include: [{ model: ProductosModel }, { model: TallesModel }]
-         }
-       ]
-     },
-     { model: ClienteModel },
-     { model: UserModel },
-     { model: LocalesModel },
-     {
-       model: VentaMediosPagoModel,
-       as: 'venta_medios_pago',
-       include: [{ model: MediosPagoModel }]
-     },
-     {
-       model: VentaDescuentosModel,
-       as: 'descuentos' // 👈 Agregado
-     }
-   ]
- });
-
+    const venta = await VentasModel.findByPk(req.params.id, {
+      include: [
+        {
+          model: DetalleVentaModel,
+          as: 'detalles',
+          include: [
+            {
+              model: StockModel,
+              include: [{ model: ProductosModel }, { model: TallesModel }]
+            }
+          ]
+        },
+        { model: ClienteModel },
+        { model: UserModel },
+        { model: LocalesModel },
+        {
+          model: VentaMediosPagoModel,
+          as: 'venta_medios_pago',
+          include: [{ model: MediosPagoModel }]
+        },
+        {
+          model: VentaDescuentosModel,
+          as: 'descuentos' // 👈 Agregado
+        }
+      ]
+    });
 
     if (!venta)
       return res.status(404).json({ mensajeError: 'Venta no encontrada' });
