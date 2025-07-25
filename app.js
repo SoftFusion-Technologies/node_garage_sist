@@ -74,6 +74,7 @@ app.get('/ventas-historial', async (req, res) => {
       local,
       vendedor,
       cliente,
+      busqueda,
       page = 1,
       limit = 10
     } = req.query;
@@ -82,40 +83,75 @@ app.get('/ventas-historial', async (req, res) => {
     const pageNum = Number(page);
     const offsetNum = (pageNum - 1) * limitNum;
 
+    const localId = local ? Number(local) : null;
+    const vendedorId = vendedor ? Number(vendedor) : null;
+    const clienteId = cliente ? Number(cliente) : null;
+
     let filtros = [];
     let params = [];
 
-    if (desde) {
-      filtros.push('v.fecha >= ?');
+    if (desde && !hasta) {
+      filtros.push('DATE(v.fecha) = ?');
       params.push(desde);
+    } else {
+      if (desde) {
+        filtros.push('DATE(v.fecha) >= ?');
+        params.push(desde);
+      }
+      if (hasta) {
+        filtros.push('DATE(v.fecha) <= ?');
+        params.push(hasta);
+      }
     }
-    if (hasta) {
-      filtros.push('v.fecha <= ?');
-      params.push(hasta);
-    }
-    if (local) {
+
+    if (localId) {
       filtros.push('v.local_id = ?');
-      params.push(local);
+      params.push(localId);
     }
-    if (vendedor) {
+    if (vendedorId) {
       filtros.push('v.usuario_id = ?');
-      params.push(vendedor);
+      params.push(vendedorId);
     }
-    if (cliente) {
+    if (clienteId) {
       filtros.push('v.cliente_id = ?');
-      params.push(cliente);
+      params.push(clienteId);
+    }
+
+    if (busqueda) {
+      const busquedaId = busqueda.trim().replace('#', '');
+      const posibleId = Number(busquedaId);
+
+      if (!isNaN(posibleId)) {
+        filtros.push('v.id = ?');
+        params.push(posibleId);
+      } else {
+        filtros.push(`(
+      IFNULL(c.nombre, '') LIKE ? OR
+      IFNULL(u.nombre, '') LIKE ? OR
+      IFNULL(l.nombre, '') LIKE ?
+    )`);
+        params.push(`%${busqueda}%`, `%${busqueda}%`, `%${busqueda}%`);
+      }
     }
 
     const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
 
-    // Consulta total registros para paginación
-    const [countResult] = await db.query(
-      `SELECT COUNT(*) AS total FROM ventas v ${where}`,
+    // 1️⃣ JOIN siempre antes del WHERE
+    const baseFrom = `
+      FROM ventas v
+      LEFT JOIN clientes c ON v.cliente_id = c.id
+      LEFT JOIN usuarios u ON v.usuario_id = u.id
+      LEFT JOIN locales l ON v.local_id = l.id
+    `;
+
+    // Total para paginación
+    const [countResult] = await pool.query(
+      `SELECT COUNT(*) AS total ${baseFrom} ${where}`,
       params
     );
     const total = countResult[0].total;
 
-    // Consulta con limit y offset interpolados para evitar error
+    // Data paginada
     const query = `
       SELECT 
         v.id AS venta_id,
@@ -125,16 +161,13 @@ app.get('/ventas-historial', async (req, res) => {
         c.nombre AS cliente,
         u.nombre AS vendedor,
         l.nombre AS local
-      FROM ventas v
-      LEFT JOIN clientes c ON v.cliente_id = c.id
-      LEFT JOIN usuarios u ON v.usuario_id = u.id
-      LEFT JOIN locales l ON v.local_id = l.id
+      ${baseFrom}
       ${where}
       ORDER BY v.fecha DESC
       LIMIT ${limitNum} OFFSET ${offsetNum}
     `;
 
-    const [rows] = await db.query(query, params);
+    const [rows] = await pool.query(query, params);
 
     res.json({
       total,
@@ -143,10 +176,10 @@ app.get('/ventas-historial', async (req, res) => {
       ventas: rows
     });
   } catch (err) {
+    console.error('Error en /ventas-historial:', err);
     res.status(500).json({ mensajeError: err.message });
   }
 });
-
 
 // GET /ventas/:id/detalle
 app.get('/ventas/:id/detalle', async (req, res) => {
