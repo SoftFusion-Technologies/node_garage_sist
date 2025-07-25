@@ -126,17 +126,17 @@ app.get('/ventas-historial', async (req, res) => {
         params.push(posibleId);
       } else {
         filtros.push(`(
-      IFNULL(c.nombre, '') LIKE ? OR
-      IFNULL(u.nombre, '') LIKE ? OR
-      IFNULL(l.nombre, '') LIKE ?
-    )`);
+          IFNULL(c.nombre, '') LIKE ? OR
+          IFNULL(u.nombre, '') LIKE ? OR
+          IFNULL(l.nombre, '') LIKE ?
+        )`);
         params.push(`%${busqueda}%`, `%${busqueda}%`, `%${busqueda}%`);
       }
     }
 
     const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
 
-    // 1️⃣ JOIN siempre antes del WHERE
+    // Total para paginación
     const baseFrom = `
       FROM ventas v
       LEFT JOIN clientes c ON v.cliente_id = c.id
@@ -144,25 +144,47 @@ app.get('/ventas-historial', async (req, res) => {
       LEFT JOIN locales l ON v.local_id = l.id
     `;
 
-    // Total para paginación
     const [countResult] = await pool.query(
-      `SELECT COUNT(*) AS total ${baseFrom} ${where}`,
+      `SELECT COUNT(DISTINCT v.id) AS total ${baseFrom} ${where}`,
       params
     );
     const total = countResult[0].total;
 
-    // Data paginada
+    // Datos con JOIN de devoluciones y detalles
     const query = `
-      SELECT 
-        v.id AS venta_id,
-        v.fecha,
-        v.total,
-        v.estado,
-        c.nombre AS cliente,
-        u.nombre AS vendedor,
-        l.nombre AS local
-      ${baseFrom}
+    SELECT 
+      v.id AS venta_id,
+      v.fecha,
+      v.total,
+      v.estado,
+      c.nombre AS cliente,
+      u.nombre AS vendedor,
+      l.nombre AS local,
+
+      -- Total de productos vendidos en detalle_venta
+      (
+        SELECT SUM(dv.cantidad)
+        FROM detalle_venta dv
+        WHERE dv.venta_id = v.id
+      ) AS total_productos,
+
+      -- Total de productos devueltos en detalle_devolucion
+      (
+        SELECT SUM(dd.cantidad)
+        FROM devoluciones d
+        JOIN detalle_devolucion dd ON dd.devolucion_id = d.id
+        WHERE d.venta_id = v.id
+      ) AS total_devueltos
+
+      FROM ventas v
+      LEFT JOIN clientes c ON v.cliente_id = c.id
+      LEFT JOIN usuarios u ON v.usuario_id = u.id
+      LEFT JOIN locales l ON v.local_id = l.id
+      LEFT JOIN detalle_venta dvv ON dvv.venta_id = v.id
+      LEFT JOIN devoluciones dd ON dd.venta_id = v.id
+      LEFT JOIN detalle_devolucion ddd ON ddd.devolucion_id = dd.id
       ${where}
+      GROUP BY v.id
       ORDER BY v.fecha DESC
       LIMIT ${limitNum} OFFSET ${offsetNum}
     `;
@@ -180,6 +202,7 @@ app.get('/ventas-historial', async (req, res) => {
     res.status(500).json({ mensajeError: err.message });
   }
 });
+
 
 // GET /ventas/:id/detalle
 app.get('/ventas/:id/detalle', async (req, res) => {

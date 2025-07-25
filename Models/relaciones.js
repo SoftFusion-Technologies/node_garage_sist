@@ -29,6 +29,10 @@ import { MediosPagoModel } from './Ventas/MD_TB_MediosPago.js';
 import { CajaModel } from './Ventas/MD_TB_Caja.js';
 import { MovimientosCajaModel } from './Ventas/MD_TB_MovimientosCaja.js';
 import { VentaDescuentosModel } from './Ventas/MD_TB_VentaDescuentos.js';
+
+import { DevolucionesModel } from './Ventas/MD_TB_Devoluciones.js';
+import { DetalleDevolucionModel } from './Ventas/MD_TB_DetalleDevolucion.js';
+import {MovimientosCajaPendientesModel} from './Ventas/MD_TB_MovimientosCajaPendientes.js'
 // RELACIONES MODULO DE VENTAS
 
 // Relaciones de Stock con otras tablas
@@ -98,3 +102,35 @@ VentasModel.hasMany(VentaDescuentosModel, {
   as: 'descuentos'
 });
 
+// Relaciones de devoluciones
+DevolucionesModel.belongsTo(VentasModel, { foreignKey: 'venta_id' });
+VentasModel.hasMany(DevolucionesModel, { foreignKey: 'venta_id', as: 'devoluciones' });
+
+DevolucionesModel.belongsTo(UserModel, { foreignKey: 'usuario_id' });
+UserModel.hasMany(DevolucionesModel, { foreignKey: 'usuario_id' });
+
+DetalleDevolucionModel.belongsTo(DevolucionesModel, { foreignKey: 'devolucion_id' });
+DevolucionesModel.hasMany(DetalleDevolucionModel, { foreignKey: 'devolucion_id', as: 'detalles' });
+
+DetalleDevolucionModel.belongsTo(StockModel, { foreignKey: 'stock_id' });
+StockModel.hasMany(DetalleDevolucionModel, { foreignKey: 'stock_id' });
+
+// 🔁 Nueva relación: cada detalle de devolución está relacionado con un detalle de venta
+DetalleDevolucionModel.belongsTo(DetalleVentaModel, {
+  foreignKey: 'detalle_venta_id',
+  as: 'detalle_venta'
+});
+
+DetalleVentaModel.hasMany(DetalleDevolucionModel, {
+  foreignKey: 'detalle_venta_id',
+  as: 'devoluciones'
+});
+
+
+MovimientosCajaPendientesModel.belongsTo(UserModel, {
+  foreignKey: 'usuario_id'
+});
+
+MovimientosCajaPendientesModel.belongsTo(LocalesModel, {
+  foreignKey: 'local_id'
+});

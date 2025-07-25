@@ -22,6 +22,8 @@ import { StockModel } from '../../Models/Stock/MD_TB_Stock.js';
 import { ProductosModel } from '../../Models/Stock/MD_TB_Productos.js';
 import { TallesModel } from '../../Models/Stock/MD_TB_Talles.js';
 import { VentaDescuentosModel } from '../../Models/Ventas/MD_TB_VentaDescuentos.js';
+import { DetalleDevolucionModel } from '../../Models/Ventas/MD_TB_DetalleDevolucion.js';
+import { DevolucionesModel } from '../../Models/Ventas/MD_TB_Devoluciones.js';
 // Obtener todas las ventas
 export const OBRS_Ventas_CTS = async (req, res) => {
   try {
@@ -86,6 +88,26 @@ export const OBR_Venta_CTS = async (req, res) => {
         {
           model: VentaDescuentosModel,
           as: 'descuentos'
+        },
+        // 🔁 Incluimos devoluciones y sus detalles (con vínculo al detalle_venta)
+        {
+          model: DevolucionesModel,
+          as: 'devoluciones',
+          attributes: ['id', 'fecha', 'total_devuelto'],
+          include: [
+            {
+              model: DetalleDevolucionModel,
+              as: 'detalles',
+              attributes: ['id', 'cantidad', 'stock_id', 'detalle_venta_id'],
+              include: [
+                {
+                  model: DetalleVentaModel,
+                  as: 'detalle_venta',
+                  attributes: ['id', 'cantidad']
+                }
+              ]
+            }
+          ]
         }
       ]
     });
@@ -94,12 +116,16 @@ export const OBR_Venta_CTS = async (req, res) => {
       return res.status(404).json({ mensajeError: 'Venta no encontrada' });
     }
 
+    // Verificación rápida en backend (opcional)
+    // console.dir(venta.devoluciones, { depth: null });
+
     res.json(venta);
   } catch (error) {
     console.error('Error al obtener venta:', error);
     res.status(500).json({ mensajeError: error.message });
   }
 };
+
 
 // Crear una nueva venta
 export const CR_Venta_CTS = async (req, res) => {

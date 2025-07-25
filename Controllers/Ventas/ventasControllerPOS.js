@@ -18,6 +18,8 @@ import { LocalesModel } from '../../Models/Stock/MD_TB_Locales.js';
 import { MediosPagoModel } from '../../Models/Ventas/MD_TB_MediosPago.js';
 import { VentaDescuentosModel } from '../../Models/Ventas/MD_TB_VentaDescuentos.js';
 
+import { DevolucionesModel } from '../../Models/Ventas/MD_TB_Devoluciones.js';
+import { DetalleDevolucionModel } from '../../Models/Ventas/MD_TB_DetalleDevolucion.js';
 /** 1. Búsqueda simple por SKU o nombre, sin agrupación (detalle por talle) */
 export const buscarItemsVenta = async (req, res) => {
   const { query } = req.query;
@@ -387,6 +389,18 @@ export const OBR_VentaDetalle_CTS = async (req, res) => {
         {
           model: VentaDescuentosModel,
           as: 'descuentos' // 👈 Agregado
+        }, // 🔁 Agregamos las devoluciones y sus detalles
+        {
+          model: DevolucionesModel,
+          as: 'devoluciones',
+          attributes: ['id', 'fecha', 'total_devuelto'],
+          include: [
+            {
+              model: DetalleDevolucionModel,
+              as: 'detalles',
+              attributes: ['id', 'cantidad', 'stock_id', 'detalle_venta_id']
+            }
+          ]
         }
       ]
     });
