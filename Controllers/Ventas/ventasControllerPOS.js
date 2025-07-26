@@ -5,6 +5,7 @@ import { ProductosModel } from '../../Models/Stock/MD_TB_Productos.js';
 import { TallesModel } from '../../Models/Stock/MD_TB_Talles.js';
 
 import db from '../../DataBase/db.js'; // Ajusta la ruta según tu proyecto
+import { getFechaArgentina } from '../../Utils/fechaArgentina.js';
 
 import { VentasModel } from '../../Models/Ventas/MD_TB_Ventas.js';
 import { DetalleVentaModel } from '../../Models/Ventas/MD_TB_DetalleVenta.js';
@@ -251,12 +252,15 @@ export const registrarVenta = async (req, res) => {
       }
     }
 
+    const fechaFinal = getFechaArgentina();
+
     const venta = await VentasModel.create(
       {
         cliente_id: cliente_id || null,
         usuario_id,
         local_id,
         total: totalFinal,
+        fecha: fechaFinal,
         descuento_porcentaje: aplicar_descuento ? descuento : 0,
         recargo_porcentaje: aplicar_descuento ? recargo : 0,
         aplicar_descuento, // Guardamos si se aplicó o no

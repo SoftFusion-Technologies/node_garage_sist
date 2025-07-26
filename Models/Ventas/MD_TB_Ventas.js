@@ -30,8 +30,8 @@ export const VentasModel = db.define(
     },
     fecha: {
       type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: DataTypes.NOW
+      allowNull: false
+      // sin defaultValue
     },
     cliente_id: {
       type: DataTypes.INTEGER.UNSIGNED,
