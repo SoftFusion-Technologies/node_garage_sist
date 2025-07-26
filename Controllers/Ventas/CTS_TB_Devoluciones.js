@@ -20,6 +20,11 @@ import { CajaModel } from '../../Models/Ventas/MD_TB_Caja.js';
 import { MovimientosCajaModel } from '../../Models/Ventas/MD_TB_MovimientosCaja.js';
 import { VentaMediosPagoModel } from '../../Models/Ventas/MD_TB_VentaMediosPago.js';
 import MD_TB_MediosPago from '../../Models/Ventas/MD_TB_MediosPago.js';
+import { UserModel } from '../../Models/MD_TB_Users.js';
+import { LocalesModel } from '../../Models/Stock/MD_TB_Locales.js';
+import { ProductosModel } from '../../Models/Stock/MD_TB_Productos.js';
+import { TallesModel } from '../../Models/Stock/MD_TB_Talles.js';
+
 const { MediosPagoModel } = MD_TB_MediosPago;
 // Obtener todas las devoluciones
 export const OBRS_Devoluciones_CTS = async (req, res) => {
@@ -40,10 +45,20 @@ export const OBR_Devolucion_CTS = async (req, res) => {
     const devolucion = await DevolucionesModel.findByPk(req.params.id, {
       include: [
         { model: VentasModel },
+        { model: UserModel, as: 'usuario' },
+        { model: LocalesModel, as: 'local' },
         {
           model: DetalleDevolucionModel,
           as: 'detalles',
-          include: [{ model: StockModel }]
+          include: [
+            {
+              model: StockModel,
+              include: [
+                { model: ProductosModel, as: 'producto' },
+                { model: TallesModel, as: 'talle' }
+              ]
+            }
+          ]
         }
       ]
     });

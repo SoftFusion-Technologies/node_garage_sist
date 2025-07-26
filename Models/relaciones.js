@@ -126,3 +126,12 @@ DetalleVentaModel.hasMany(DetalleDevolucionModel, {
 });
 
 
+DevolucionesModel.belongsTo(LocalesModel, {
+  foreignKey: 'local_id',
+  as: 'local'
+});
+
+LocalesModel.hasMany(DevolucionesModel, {
+  foreignKey: 'local_id',
+  as: 'devoluciones'
+});
