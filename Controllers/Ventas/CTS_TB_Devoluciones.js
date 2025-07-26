@@ -25,7 +25,8 @@ const { MediosPagoModel } = MD_TB_MediosPago;
 export const OBRS_Devoluciones_CTS = async (req, res) => {
   try {
     const devoluciones = await DevolucionesModel.findAll({
-      include: [{ model: VentasModel }]
+      include: [{ model: VentasModel }],
+      order: [['id', 'DESC']]
     });
     res.json(devoluciones);
   } catch (error) {
@@ -57,7 +58,6 @@ export const OBR_Devolucion_CTS = async (req, res) => {
   }
 };
 
-// Crear una nueva devolución
 // Crear una nueva devolución
 export const CR_Devolucion_CTS = async (req, res) => {
   const { venta_id, usuario_id, local_id, detalles, motivo } = req.body;
@@ -181,7 +181,6 @@ export const CR_Devolucion_CTS = async (req, res) => {
     res.status(500).json({ mensajeError: error.message });
   }
 };
-
 
 // Eliminar devolución
 export const ER_Devolucion_CTS = async (req, res) => {
