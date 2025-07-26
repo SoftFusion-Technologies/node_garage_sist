@@ -73,9 +73,10 @@ export const CR_Devolucion_CTS = async (req, res) => {
   }
 
   try {
-    // 🔍 Obtener datos de la venta y medio de pago
+    // Obtener datos de la venta
     const venta = await VentasModel.findByPk(venta_id, {
       include: [
+        { model: DetalleVentaModel, as: 'detalles' },
         {
           model: VentaMediosPagoModel,
           as: 'venta_medios_pago',
@@ -84,11 +85,7 @@ export const CR_Devolucion_CTS = async (req, res) => {
       ]
     });
 
-    const ajusteMedioPago = Number(
-      venta?.venta_medios_pago?.[0]?.medios_pago?.ajuste_porcentual ?? 0
-    );
-
-    // 1️⃣ Crear la devolución base (provisional)
+    // Crear la devolución base
     const devolucion = await DevolucionesModel.create({
       venta_id,
       usuario_id,
@@ -100,23 +97,27 @@ export const CR_Devolucion_CTS = async (req, res) => {
 
     let totalCalculado = 0;
 
-    // 2️⃣ Iterar sobre los productos devueltos
     for (const item of detalles) {
-      const { detalle_venta_id, stock_id, cantidad } = item;
+      const { detalle_venta_id, stock_id, cantidad, monto } = item;
 
-      const detalleVenta = await DetalleVentaModel.findByPk(detalle_venta_id);
+      if (monto == null || isNaN(monto)) {
+        return res.status(400).json({
+          mensajeError: 'Falta el monto en uno de los ítems a devolver.'
+        });
+      }
+
+      const detalleVenta = venta.detalles.find(
+        (d) => d.id === detalle_venta_id
+      );
       if (!detalleVenta) continue;
 
       const cantidadVendida = detalleVenta.cantidad;
-
-      // 🔍 Consultamos cuánto ya se devolvió de ese detalle
       const cantidadYaDevuelta = await DetalleDevolucionModel.sum('cantidad', {
         where: { detalle_venta_id }
       });
 
       const disponibleParaDevolver =
         cantidadVendida - (cantidadYaDevuelta || 0);
-
       if (cantidad > disponibleParaDevolver) {
         return res.status(400).json({
           mensajeError: `Ya se devolvieron ${
@@ -125,29 +126,19 @@ export const CR_Devolucion_CTS = async (req, res) => {
         });
       }
 
-      // 🧠 Precio unitario final = precio con descuento producto + ajuste medio pago
-      const precioBase = Number(
-        detalleVenta.precio_unitario_con_descuento ??
-          detalleVenta.precio_unitario
-      );
-      const precioFinalUnitario =
-        precioBase + (precioBase * ajusteMedioPago) / 100;
-
-      
-      const monto = cantidad * precioFinalUnitario;
-
+      // Crear detalle de devolución con monto enviado
       await DetalleDevolucionModel.create({
         devolucion_id: devolucion.id,
         detalle_venta_id,
         stock_id,
         cantidad,
-        precio_unitario: precioFinalUnitario,
+        precio_unitario: monto / cantidad,
         monto
       });
 
-      totalCalculado += monto;
+      totalCalculado += Number(monto);
 
-      // 3️⃣ Restituir stock
+      // Restituir stock
       const stock = await StockModel.findByPk(stock_id);
       if (stock) {
         stock.cantidad += cantidad;
@@ -155,42 +146,30 @@ export const CR_Devolucion_CTS = async (req, res) => {
       }
     }
 
-    // 4️⃣ Actualizar la devolución con el total real
+    // Actualizar devolución con total calculado
     await devolucion.update({ total_devuelto: totalCalculado });
 
-    // 5️⃣ Buscar caja abierta
+    // Buscar caja activa
     const caja = await CajaModel.findOne({
-      where: {
-        local_id,
-        fecha_cierre: null
-      },
+      where: { local_id, fecha_cierre: null },
       order: [['id', 'DESC']]
     });
 
+    const movimiento = {
+      tipo: 'egreso',
+      descripcion: `Devolución de venta #${venta_id}`,
+      monto: totalCalculado,
+      referencia: `DEV-${devolucion.id}`,
+      fecha: new Date()
+    };
+
     if (caja) {
-      await MovimientosCajaModel.create({
-        caja_id: caja.id,
-        tipo: 'egreso',
-        descripcion: `Devolución de venta #${venta_id}`,
-        monto: totalCalculado,
-        referencia: `DEV-${devolucion.id}`,
-        fecha: new Date()
-      });
+      await MovimientosCajaModel.create({ ...movimiento, caja_id: caja.id });
     } else {
-      await MovimientosCajaPendientesModel.create({
-        local_id,
-        tipo: 'egreso',
-        descripcion: `Devolución de venta #${venta_id}`,
-        monto: totalCalculado,
-        referencia: `DEV-${devolucion.id}`,
-        fecha: new Date()
-      });
+      await MovimientosCajaPendientesModel.create({ ...movimiento, local_id });
     }
 
-    res.json({
-      message: 'Devolución registrada correctamente',
-      devolucion
-    });
+    res.json({ message: 'Devolución registrada correctamente', devolucion });
   } catch (error) {
     console.error('Error al registrar devolución:', error);
     res.status(500).json({ mensajeError: error.message });
