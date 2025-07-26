@@ -425,4 +425,18 @@ router.get('/devoluciones/:id', OBR_Devolucion_CTS); // Obtener una devolución 
 router.post('/devoluciones', CR_Devolucion_CTS); // Crear nueva devolución
 router.delete('/devoluciones/:id', ER_Devolucion_CTS); // Eliminar devolución por ID
 
+
+import {
+  obtenerVentasPorMes,
+  obtenerVentasPorMedioPago,
+  obtenerProductosMasVendidos,
+  obtenerVentasPorLocal,
+  obtenerResumenDescuentos
+} from '../Controllers/analyticsController.js';
+
+router.get('/ventas-mensuales', obtenerVentasPorMes);
+router.get('/ventas-por-medio-pago', obtenerVentasPorMedioPago);
+router.get('/productos-mas-vendidos', obtenerProductosMasVendidos);
+router.get('/ventas-por-local', obtenerVentasPorLocal);
+router.get('/resumen-descuentos', obtenerResumenDescuentos);
 export default router;
