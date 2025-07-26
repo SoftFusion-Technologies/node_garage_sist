@@ -319,7 +319,8 @@ import {
   OBR_Caja_CTS,
   CR_Caja_CTS,
   ER_Caja_CTS,
-  UR_Caja_CTS
+  UR_Caja_CTS,
+  OBRS_CajaByLocal_CTS
 } from '../Controllers/Ventas/CTS_TB_Caja.js';
 
 // ----------------------------------------------------------------
@@ -331,6 +332,7 @@ router.get('/caja/:id', OBR_Caja_CTS); // Obtener una caja por ID
 router.post('/caja', CR_Caja_CTS); // Abrir nueva caja
 router.delete('/caja/:id', ER_Caja_CTS); // Eliminar caja por ID
 router.put('/caja/:id', UR_Caja_CTS); // Actualizar/cerrar caja por ID
+router.get('/caja/local/:id', OBRS_CajaByLocal_CTS);
 
 // Importar controladores de movimientos_caja
 import {

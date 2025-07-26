@@ -93,3 +93,17 @@ export const UR_Caja_CTS = async (req, res) => {
     res.status(500).json({ mensajeError: error.message });
   }
 };
+
+// Obtener todas las cajas de un local específico
+export const OBRS_CajaByLocal_CTS = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const cajas = await CajaModel.findAll({
+      where: { local_id: id },
+      order: [['fecha_apertura', 'DESC']]
+    });
+    res.json(cajas);
+  } catch (error) {
+    res.status(500).json({ mensajeError: error.message });
+  }
+};
