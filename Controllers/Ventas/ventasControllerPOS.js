@@ -445,3 +445,90 @@ export const OBR_VentaDetalle_CTS = async (req, res) => {
     res.status(500).json({ mensajeError: error.message });
   }
 };
+
+// 🚫 Anular una venta
+export const anularVenta = async (req, res) => {
+  const ventaId = req.params.id;
+  const t = await db.transaction();
+
+  try {
+    const venta = await VentasModel.findByPk(ventaId, {
+      include: [
+        {
+          model: DetalleVentaModel,
+          as: 'detalles'
+        },
+        {
+          model: VentaMediosPagoModel,
+          as: 'venta_medios_pago'
+        }
+      ],
+      transaction: t
+    });
+
+    if (!venta) {
+      await t.rollback();
+      return res.status(404).json({ mensajeError: 'Venta no encontrada' });
+    }
+
+    if (venta.estado === 'anulada') {
+      await t.rollback();
+      return res.status(400).json({ mensajeError: 'La venta ya fue anulada' });
+    }
+
+    const devoluciones = await DevolucionesModel.findAll({
+      where: { venta_id: ventaId },
+      transaction: t
+    });
+
+    if (devoluciones.length > 0) {
+      throw new Error(
+        'No se puede anular una venta que ya tiene devoluciones registradas'
+      );
+    }
+
+    const caja = await CajaModel.findOne({
+      where: {
+        local_id: venta.local_id,
+        usuario_id: venta.usuario_id,
+        fecha_cierre: null
+      },
+      transaction: t
+    });
+
+    if (!caja) throw new Error('No hay caja abierta');
+
+    // Devolver stock
+    for (const detalle of venta.detalles) {
+      const stock = await StockModel.findByPk(detalle.stock_id, {
+        transaction: t
+      });
+      if (!stock) throw new Error(`Stock no encontrado ID ${detalle.stock_id}`);
+      stock.cantidad += detalle.cantidad;
+      await stock.save({ transaction: t });
+    }
+
+    // Egreso en caja (devolución de dinero)
+    await MovimientosCajaModel.create(
+      {
+        caja_id: caja.id,
+        tipo: 'egreso',
+        descripcion: `Anulación venta #${venta.id}`,
+        monto: venta.total,
+        referencia: `ANUL-${venta.id}`
+      },
+      { transaction: t }
+    );
+
+    // Cambiar estado
+    venta.estado = 'anulada';
+    await venta.save({ transaction: t });
+
+    await t.commit();
+    res.json({ mensaje: 'Venta anulada correctamente', id: venta.id });
+  } catch (error) {
+    await t.rollback();
+    console.error('[Error al anular venta]', error);
+    res.status(500).json({ mensajeError: error.message });
+  }
+};

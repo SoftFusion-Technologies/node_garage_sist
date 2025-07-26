@@ -233,13 +233,15 @@ import {
   buscarItemsVentaAgrupado,
   buscarItemsVentaDetallado,
   registrarVenta,
-  OBR_VentaDetalle_CTS
+  OBR_VentaDetalle_CTS,
+  anularVenta
 } from '../Controllers/Ventas/ventasControllerPOS.js';
 router.get('/buscar-productos', buscarItemsVenta);
 router.get('/buscar-productos-agrupados', buscarItemsVentaAgrupado);
 router.get('/buscar-productos-detallado', buscarItemsVentaDetallado);
 router.post('/ventas/pos', registrarVenta);
 router.get('/ventas/:id/detalle', OBR_VentaDetalle_CTS);
+router.put('/ventas/:id/anular', anularVenta);
 
 import {
   OBRS_MediosPago_CTS,
