@@ -13,7 +13,8 @@
 // Importar el modelo
 import MD_TB_Caja from '../../Models/Ventas/MD_TB_Caja.js';
 const CajaModel = MD_TB_Caja.CajaModel;
-
+import { LocalesModel } from '../../Models/Stock/MD_TB_Locales.js';
+import { UserModel } from '../../Models/MD_TB_Users.js';
 // Obtener todas las cajas
 export const OBRS_Caja_CTS = async (req, res) => {
   try {
@@ -103,6 +104,23 @@ export const OBRS_CajaByLocal_CTS = async (req, res) => {
       order: [['fecha_apertura', 'DESC']]
     });
     res.json(cajas);
+  } catch (error) {
+    res.status(500).json({ mensajeError: error.message });
+  }
+};
+
+// controllers/CTS_TB_Caja.js
+export const OBRS_CajasAbiertas_CTS = async (req, res) => {
+  try {
+    const abiertas = await CajaModel.findAll({
+      where: { fecha_cierre: null },
+      include: [
+        { model: LocalesModel }, // para traer info del local
+        { model: UserModel } // para saber quién la abrió
+      ]
+    });
+
+    res.json(abiertas);
   } catch (error) {
     res.status(500).json({ mensajeError: error.message });
   }
