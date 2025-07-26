@@ -419,24 +419,4 @@ router.get('/devoluciones/:id', OBR_Devolucion_CTS); // Obtener una devolución 
 router.post('/devoluciones', CR_Devolucion_CTS); // Crear nueva devolución
 router.delete('/devoluciones/:id', ER_Devolucion_CTS); // Eliminar devolución por ID
 
-import {
-  OBRS_MovimientosCajaPendientes_CTS,
-  OBRS_MovimientosCajaPendientesByLocal_CTS,
-  OBR_MovimientoCajaPendiente_CTS,
-  CR_MovimientoCajaPendiente_CTS,
-  ER_MovimientoCajaPendiente_CTS,
-  UR_MovimientoCajaPendiente_CTS
-} from '../Controllers/Ventas/CTS_TB_MovimientosCajaPendientes.js';
-
-// 📌 Rutas públicas / protegidas según tu auth
-router.get('/pendientes-caja', OBRS_MovimientosCajaPendientes_CTS);
-router.get(
-  '/pendientes-caja/local/:local_id',
-  OBRS_MovimientosCajaPendientesByLocal_CTS
-);
-router.get('/pendientes-caja/:id', OBR_MovimientoCajaPendiente_CTS);
-router.post('/pendientes-caja', CR_MovimientoCajaPendiente_CTS);
-router.put('/pendientes-caja/:id', UR_MovimientoCajaPendiente_CTS);
-router.delete('/pendientes-caja/:id', ER_MovimientoCajaPendiente_CTS);
-
 export default router;

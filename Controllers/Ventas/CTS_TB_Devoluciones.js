@@ -18,7 +18,6 @@ import { DetalleVentaModel } from '../../Models/Ventas/MD_TB_DetalleVenta.js';
 
 import { CajaModel } from '../../Models/Ventas/MD_TB_Caja.js';
 import { MovimientosCajaModel } from '../../Models/Ventas/MD_TB_MovimientosCaja.js';
-import { MovimientosCajaPendientesModel } from '../../Models/Ventas/MD_TB_MovimientosCajaPendientes.js';
 import { VentaMediosPagoModel } from '../../Models/Ventas/MD_TB_VentaMediosPago.js';
 import MD_TB_MediosPago from '../../Models/Ventas/MD_TB_MediosPago.js';
 const { MediosPagoModel } = MD_TB_MediosPago;
@@ -59,6 +58,7 @@ export const OBR_Devolucion_CTS = async (req, res) => {
 };
 
 // Crear una nueva devolución
+// Crear una nueva devolución
 export const CR_Devolucion_CTS = async (req, res) => {
   const { venta_id, usuario_id, local_id, detalles, motivo } = req.body;
 
@@ -73,6 +73,22 @@ export const CR_Devolucion_CTS = async (req, res) => {
   }
 
   try {
+    // 🛑 Validar que haya caja abierta para ese usuario y local
+    const cajaAbierta = await CajaModel.findOne({
+      where: {
+        local_id,
+        usuario_id,
+        fecha_cierre: null
+      },
+      order: [['id', 'DESC']]
+    });
+
+    if (!cajaAbierta) {
+      return res.status(400).json({
+        mensajeError: 'No hay una caja abierta para este usuario en este local.'
+      });
+    }
+
     // Obtener datos de la venta
     const venta = await VentasModel.findByPk(venta_id, {
       include: [
@@ -149,25 +165,15 @@ export const CR_Devolucion_CTS = async (req, res) => {
     // Actualizar devolución con total calculado
     await devolucion.update({ total_devuelto: totalCalculado });
 
-    // Buscar caja activa
-    const caja = await CajaModel.findOne({
-      where: { local_id, fecha_cierre: null },
-      order: [['id', 'DESC']]
-    });
-
-    const movimiento = {
+    // Crear el movimiento en la caja abierta
+    await MovimientosCajaModel.create({
       tipo: 'egreso',
       descripcion: `Devolución de venta #${venta_id}`,
       monto: totalCalculado,
       referencia: `DEV-${devolucion.id}`,
-      fecha: new Date()
-    };
-
-    if (caja) {
-      await MovimientosCajaModel.create({ ...movimiento, caja_id: caja.id });
-    } else {
-      await MovimientosCajaPendientesModel.create({ ...movimiento, local_id });
-    }
+      fecha: new Date(),
+      caja_id: cajaAbierta.id
+    });
 
     res.json({ message: 'Devolución registrada correctamente', devolucion });
   } catch (error) {
@@ -175,6 +181,7 @@ export const CR_Devolucion_CTS = async (req, res) => {
     res.status(500).json({ mensajeError: error.message });
   }
 };
+
 
 // Eliminar devolución
 export const ER_Devolucion_CTS = async (req, res) => {

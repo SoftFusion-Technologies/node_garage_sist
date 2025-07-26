@@ -32,7 +32,6 @@ import { VentaDescuentosModel } from './Ventas/MD_TB_VentaDescuentos.js';
 
 import { DevolucionesModel } from './Ventas/MD_TB_Devoluciones.js';
 import { DetalleDevolucionModel } from './Ventas/MD_TB_DetalleDevolucion.js';
-import {MovimientosCajaPendientesModel} from './Ventas/MD_TB_MovimientosCajaPendientes.js'
 // RELACIONES MODULO DE VENTAS
 
 // Relaciones de Stock con otras tablas
@@ -127,10 +126,3 @@ DetalleVentaModel.hasMany(DetalleDevolucionModel, {
 });
 
 
-MovimientosCajaPendientesModel.belongsTo(UserModel, {
-  foreignKey: 'usuario_id'
-});
-
-MovimientosCajaPendientesModel.belongsTo(LocalesModel, {
-  foreignKey: 'local_id'
-});
