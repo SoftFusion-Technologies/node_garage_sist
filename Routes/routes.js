@@ -30,7 +30,11 @@ import {
   OBR_Producto_CTS,
   CR_Producto_CTS,
   ER_Producto_CTS,
-  UR_Producto_CTS
+  UR_Producto_CTS,
+  AUM_Productos_Porcentaje_CTS,
+  DESH_DeshacerAjustePrecios_CTS,
+  AUM_Productos_Descuento_CTS,
+  DESH_DeshacerDescuento_CTS
 } from '../Controllers/Stock/CTS_TB_Productos.js';
 // Importar controladores de productos
 
@@ -146,6 +150,12 @@ router.delete('/productos/:id', ER_Producto_CTS);
 
 // Actualizar un producto
 router.put('/productos/:id', UR_Producto_CTS);
+
+router.post('/productos/aumentar-precio', AUM_Productos_Porcentaje_CTS);
+router.post('/productos/deshacer-ajuste', DESH_DeshacerAjustePrecios_CTS);
+
+router.post('/aplicar-descuento', AUM_Productos_Descuento_CTS);
+router.post('/deshacer-descuento', DESH_DeshacerDescuento_CTS);
 
 // ----------------------------------------------------------------
 // Rutas para operaciones CRUD en la tabla 'talles'
@@ -424,7 +434,6 @@ router.get('/devoluciones', OBRS_Devoluciones_CTS); // Obtener todas las devoluc
 router.get('/devoluciones/:id', OBR_Devolucion_CTS); // Obtener una devolución por ID
 router.post('/devoluciones', CR_Devolucion_CTS); // Crear nueva devolución
 router.delete('/devoluciones/:id', ER_Devolucion_CTS); // Eliminar devolución por ID
-
 
 import {
   obtenerVentasPorMes,
