@@ -12,6 +12,7 @@ import dotenv from 'dotenv';
 import { login, authenticateToken } from './Security/auth.js'; // Importa las funciones del archivo auth.js
 import { PORT } from './DataBase/config.js';
 import mysql from 'mysql2/promise'; // Usar mysql2 para las promesas
+import cron from 'node-cron';
 
 import './Models/relaciones.js';
 
@@ -203,7 +204,6 @@ app.get('/ventas-historial', async (req, res) => {
   }
 });
 
-
 // GET /ventas/:id/detalle
 app.get('/ventas/:id/detalle', async (req, res) => {
   try {
@@ -279,6 +279,16 @@ app.get('/ventas-mes', async (req, res) => {
   } catch (error) {
     console.error('Error al obtener productos vendidos del mes:', error);
     res.status(500).json({ mensajeError: 'Error interno al obtener datos' });
+  }
+});
+
+// borrado de la tabla temporal para no almacenar datos basura
+cron.schedule('0 0 * * *', async () => {
+  try {
+    await db.query('DELETE FROM ajustes_precios_temp');
+    console.log('🧹 Tabla ajustes_precios_temp limpiada a las 00:00');
+  } catch (error) {
+    console.error('❌ Error al limpiar ajustes_precios_temp:', error);
   }
 });
 
