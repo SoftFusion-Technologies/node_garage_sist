@@ -14,7 +14,7 @@
 import MD_TB_Clientes from '../Models/MD_TB_Clientes.js';
 import { VentasModel } from '../Models/Ventas/MD_TB_Ventas.js';
 import { DetalleVentaModel } from '../Models/Ventas/MD_TB_DetalleVenta.js';
-
+import db from '../DataBase/db.js'
 const ClienteModel = MD_TB_Clientes.ClienteModel;
 import { Op } from 'sequelize';
 
@@ -177,5 +177,27 @@ export const OBR_HistorialComprasCliente_CTS = async (req, res) => {
     res.json(ventas);
   } catch (error) {
     res.status(500).json({ mensajeError: error.message });
+  }
+};
+
+// Obtener clientes inactivos según días sin comprar
+export const OBRS_ClientesInactivos_CTS = async (req, res) => {
+  try {
+    const dias = parseInt(req.query.dias) || 60;
+
+    const clientes = await ClienteModel.findAll({
+      where: {
+        [Op.or]: [
+          { fecha_ultima_compra: null },
+          db.literal(`fecha_ultima_compra < NOW() - INTERVAL ${dias} DAY`)
+        ]
+      },
+      order: [['fecha_ultima_compra', 'ASC']]
+    });
+
+    res.json(clientes);
+  } catch (error) {
+    console.error('Error al buscar clientes inactivos:', error);
+    res.status(500).json({ mensajeError: 'Error al obtener clientes inactivos' });
   }
 };

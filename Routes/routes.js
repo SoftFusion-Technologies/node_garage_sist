@@ -99,7 +99,8 @@ import {
   ER_Cliente_CTS,
   UR_Cliente_CTS,
   SEARCH_Clientes_CTS,
-  OBR_HistorialComprasCliente_CTS
+  OBR_HistorialComprasCliente_CTS,
+  OBRS_ClientesInactivos_CTS
 } from '../Controllers/CTS_TB_Clientes.js';
 // Importar controladores de categorias
 import {
@@ -223,6 +224,7 @@ router.post('/clientes', CR_Cliente_CTS);
 router.delete('/clientes/:id', ER_Cliente_CTS);
 router.put('/clientes/:id', UR_Cliente_CTS);
 router.get('/clientes/:id/ventas', OBR_HistorialComprasCliente_CTS);
+router.get('/clientes-inactivos', OBRS_ClientesInactivos_CTS);
 
 // ----------------------------------------------------------------
 // Rutas para operaciones CRUD en la tabla 'categorias'
@@ -448,4 +450,41 @@ router.get('/ventas-por-medio-pago', obtenerVentasPorMedioPago);
 router.get('/productos-mas-vendidos', obtenerProductosMasVendidos);
 router.get('/ventas-por-local', obtenerVentasPorLocal);
 router.get('/resumen-descuentos', obtenerResumenDescuentos);
+
+// Controladores Recaptación
+import {
+  OBRS_RecaptacionCampanas_CTS,
+  OBR_RecaptacionCampana_CTS,
+  CR_RecaptacionCampana_CTS,
+  UR_RecaptacionCampana_CTS,
+  ER_RecaptacionCampana_CTS
+} from '../Controllers/Recaptacion/CTS_TB_RecaptacionCampanas.js';
+
+import {
+  OBRS_RecaptacionClientes_CTS,
+  CR_RecaptacionCliente_CTS,
+  UR_RespuestaRecaptacion_CTS,
+  ER_RecaptacionCliente_CTS
+} from '../Controllers/Recaptacion/CTS_TB_RecaptacionClientes.js';
+
+// -------------------------
+// RUTAS: CAMPAÑAS DE RECAPTACIÓN
+// -------------------------
+router.get('/recaptacion-campanas', OBRS_RecaptacionCampanas_CTS);
+router.get('/recaptacion-campanas/:id', OBR_RecaptacionCampana_CTS);
+router.post('/recaptacion-campanas', CR_RecaptacionCampana_CTS);
+router.put('/recaptacion-campanas/:id', UR_RecaptacionCampana_CTS);
+router.delete('/recaptacion-campanas/:id', ER_RecaptacionCampana_CTS);
+
+// -------------------------
+// RUTAS: CLIENTES ASIGNADOS A CAMPAÑAS
+// -------------------------
+router.get('/recaptacion-clientes', OBRS_RecaptacionClientes_CTS);
+router.post('/recaptacion-clientes', CR_RecaptacionCliente_CTS);
+router.put('/recaptacion-clientes/:id', UR_RespuestaRecaptacion_CTS);
+router.delete('/recaptacion-clientes/:id', ER_RecaptacionCliente_CTS);
+
+import { OBRS_EstadisticasRecaptacion_CTS } from '../Controllers/Analiticas/EstadisticasRecaptacion.js';
+router.get('/recaptacion-estadisticas', OBRS_EstadisticasRecaptacion_CTS);
+
 export default router;

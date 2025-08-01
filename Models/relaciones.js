@@ -34,6 +34,11 @@ import { DevolucionesModel } from './Ventas/MD_TB_Devoluciones.js';
 import { DetalleDevolucionModel } from './Ventas/MD_TB_DetalleDevolucion.js';
 // RELACIONES MODULO DE VENTAS
 
+// RELACIONES MODULO DE RECAPTACION
+import { RecaptacionCampanasModel } from './Recaptacion/MD_TB_RecaptacionCampanas.js';
+import { RecaptacionClientesModel } from './Recaptacion/MD_TB_RecaptacionClientes.js';
+// RELACIONES MODULO DE RECAPTACION
+
 // Relaciones de Stock con otras tablas
 StockModel.belongsTo(ProductosModel, { foreignKey: 'producto_id' });
 StockModel.belongsTo(TallesModel, { foreignKey: 'talle_id' });
@@ -135,3 +140,17 @@ LocalesModel.hasMany(DevolucionesModel, {
   foreignKey: 'local_id',
   as: 'devoluciones'
 });
+
+// RELACIONES MODULO DE RECAPTACION
+ClienteModel.hasMany(RecaptacionClientesModel, { foreignKey: 'cliente_id' });
+RecaptacionClientesModel.belongsTo(ClienteModel, { foreignKey: 'cliente_id' });
+
+RecaptacionCampanasModel.hasMany(RecaptacionClientesModel, {
+  foreignKey: 'campana_id'
+});
+RecaptacionClientesModel.belongsTo(RecaptacionCampanasModel, {
+  foreignKey: 'campana_id'
+});
+
+// RELACIONES MODULO DE RECAPTACION
+
