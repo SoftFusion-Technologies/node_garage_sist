@@ -274,7 +274,9 @@ import {
   OBR_Venta_CTS,
   CR_Venta_CTS,
   ER_Venta_CTS,
-  UR_Venta_CTS
+  UR_Venta_CTS,
+  OBRS_VentasPorVendedor,
+  OBRS_EstadisticasGeneralesVendedores
 } from '../Controllers/Ventas/CTS_TB_Ventas.js';
 
 // ----------------------------------------------------------------
@@ -286,6 +288,8 @@ router.get('/ventas/:id', OBR_Venta_CTS); // Obtener una venta por ID
 router.post('/ventas', CR_Venta_CTS); // Crear nueva venta
 router.delete('/ventas/:id', ER_Venta_CTS); // Eliminar venta por ID
 router.put('/ventas/:id', UR_Venta_CTS); // Actualizar venta por ID
+router.get('/ventas-por-vendedor', OBRS_VentasPorVendedor);
+router.get('/ventas-estadisticas', OBRS_EstadisticasGeneralesVendedores);
 
 // Importar controladores de detalle_venta
 import {
