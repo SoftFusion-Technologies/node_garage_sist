@@ -21,6 +21,10 @@ import { VentaDescuentosModel } from '../../Models/Ventas/MD_TB_VentaDescuentos.
 
 import { DevolucionesModel } from '../../Models/Ventas/MD_TB_Devoluciones.js';
 import { DetalleDevolucionModel } from '../../Models/Ventas/MD_TB_DetalleDevolucion.js';
+
+import { ComboVentaLogModel } from '../../Models/Combos/MD_TB_ComboVentaLog.js';
+import { DetalleVentaCombosModel } from '../../Models/Combos/MD_TB_DetalleVentaCombos.js';
+import { ComboProductosPermitidosModel } from '../../Models/Combos/MD_TB_ComboProductosPermitidos.js';
 /** 1. Búsqueda simple por SKU o nombre, sin agrupación (detalle por talle) */
 export const buscarItemsVenta = async (req, res) => {
   const { query } = req.query;
@@ -112,24 +116,54 @@ export const buscarItemsVentaAgrupado = async (req, res) => {
 
 /** 3. Búsqueda detallada con talles y stock para selección exacta */
 export const buscarItemsVentaDetallado = async (req, res) => {
-  const { query } = req.query;
-  const isNumeric = query && !isNaN(Number(query)); // True si el query es número
+  const { query, combo_id } = req.query;
+  const isNumeric = query && !isNaN(Number(query));
 
   try {
+    let productosPermitidos = [];
+    let categoriasPermitidas = [];
+
+    if (combo_id) {
+      const permitidos = await ComboProductosPermitidosModel.findAll({
+        where: { combo_id }
+      });
+
+      productosPermitidos = permitidos
+        .filter((p) => p.producto_id)
+        .map((p) => p.producto_id);
+
+      categoriasPermitidas = permitidos
+        .filter((p) => p.categoria_id)
+        .map((p) => p.categoria_id);
+    }
+
+    let whereStock = {
+      cantidad: { [Op.gt]: 0 },
+      [Op.or]: [
+        { codigo_sku: { [Op.like]: `%${query}%` } },
+        { '$producto.nombre$': { [Op.like]: `%${query}%` } },
+        ...(isNumeric
+          ? [{ '$producto.id$': Number(query) }, { id: Number(query) }]
+          : [])
+      ]
+    };
+
+    if (
+      combo_id &&
+      (productosPermitidos.length > 0 || categoriasPermitidas.length > 0)
+    ) {
+      whereStock[Op.and] = [
+        {
+          [Op.or]: [
+            { '$producto.id$': productosPermitidos },
+            { '$producto.categoria_id$': categoriasPermitidas }
+          ]
+        }
+      ];
+    }
+
     const items = await StockModel.findAll({
-      where: {
-        cantidad: { [Op.gt]: 0 },
-        [Op.or]: [
-          { codigo_sku: { [Op.like]: `%${query}%` } },
-          { '$producto.nombre$': { [Op.like]: `%${query}%` } },
-          ...(isNumeric
-            ? [
-                { '$producto.id$': Number(query) },
-                { id: Number(query) } // id de Stock
-              ]
-            : [])
-        ]
-      },
+      where: whereStock,
       include: [
         {
           model: ProductosModel,
@@ -139,8 +173,9 @@ export const buscarItemsVentaDetallado = async (req, res) => {
             'nombre',
             'precio',
             'descuento_porcentaje',
-            'precio_con_descuento'
-          ] // Agregados
+            'precio_con_descuento',
+            'categoria_id'
+          ]
         },
         {
           model: TallesModel,
@@ -151,7 +186,6 @@ export const buscarItemsVentaDetallado = async (req, res) => {
       limit: 50
     });
 
-    // Devolver con detalle por talle
     const respuesta = items.map((s) => ({
       stock_id: s.id,
       producto_id: s.producto.id,
@@ -166,7 +200,8 @@ export const buscarItemsVentaDetallado = async (req, res) => {
       talle_id: s.talle_id,
       talle_nombre: s.talle?.nombre || 'Sin talle',
       cantidad_disponible: s.cantidad,
-      codigo_sku: s.codigo_sku
+      codigo_sku: s.codigo_sku,
+      categoria_id: s.producto.categoria_id
     }));
 
     res.json(respuesta);
@@ -181,6 +216,7 @@ export const registrarVenta = async (req, res) => {
   const {
     cliente_id,
     productos,
+    combos = [], // 🆕 Soporte para combos
     total,
     medio_pago_id,
     usuario_id,
@@ -294,6 +330,32 @@ export const registrarVenta = async (req, res) => {
       const stock = await StockModel.findByPk(p.stock_id, { transaction: t });
       stock.cantidad -= p.cantidad;
       await stock.save({ transaction: t });
+    }
+
+    // 💥 Insertar combos vendidos
+    for (const combo of combos) {
+      // 1. Insertar en combo_venta_log
+      await ComboVentaLogModel.create(
+        {
+          venta_id: venta.id,
+          combo_id: combo.combo_id,
+          precio_combo: combo.precio_combo,
+          cantidad: 1
+        },
+        { transaction: t }
+      );
+
+      // 2. Insertar en detalle_venta_combos
+      for (const item of combo.productos) {
+        await DetalleVentaCombosModel.create(
+          {
+            venta_id: venta.id,
+            combo_id: combo.combo_id,
+            stock_id: item.stock_id
+          },
+          { transaction: t }
+        );
+      }
     }
 
     await VentaMediosPagoModel.create(

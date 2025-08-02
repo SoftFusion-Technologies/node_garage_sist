@@ -137,7 +137,6 @@ app.get('/ventas-historial', async (req, res) => {
 
     const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
 
-    // Total para paginación
     const baseFrom = `
       FROM ventas v
       LEFT JOIN clientes c ON v.cliente_id = c.id
@@ -151,58 +150,97 @@ app.get('/ventas-historial', async (req, res) => {
     );
     const total = countResult[0].total;
 
-    // Datos con JOIN de devoluciones y detalles
+    // Datos de las ventas
     const query = `
-    SELECT 
-      v.id AS venta_id,
-      v.fecha,
-      v.total,
-      v.estado,
-      c.nombre AS cliente,
-      u.nombre AS vendedor,
-      l.nombre AS local,
+      SELECT 
+        v.id AS venta_id,
+        v.fecha,
+        v.total,
+        v.estado,
+        c.nombre AS cliente,
+        u.nombre AS vendedor,
+        l.nombre AS local,
 
-      -- Total de productos vendidos en detalle_venta
-      (
-        SELECT SUM(dv.cantidad)
-        FROM detalle_venta dv
-        WHERE dv.venta_id = v.id
-      ) AS total_productos,
+        (
+          SELECT SUM(dv.cantidad)
+          FROM detalle_venta dv
+          WHERE dv.venta_id = v.id
+        ) AS total_productos,
 
-      -- Total de productos devueltos en detalle_devolucion
-      (
-        SELECT SUM(dd.cantidad)
-        FROM devoluciones d
-        JOIN detalle_devolucion dd ON dd.devolucion_id = d.id
-        WHERE d.venta_id = v.id
-      ) AS total_devueltos
+        (
+          SELECT SUM(dd.cantidad)
+          FROM devoluciones d
+          JOIN detalle_devolucion dd ON dd.devolucion_id = d.id
+          WHERE d.venta_id = v.id
+        ) AS total_devueltos
 
       FROM ventas v
       LEFT JOIN clientes c ON v.cliente_id = c.id
       LEFT JOIN usuarios u ON v.usuario_id = u.id
       LEFT JOIN locales l ON v.local_id = l.id
-      LEFT JOIN detalle_venta dvv ON dvv.venta_id = v.id
-      LEFT JOIN devoluciones dd ON dd.venta_id = v.id
-      LEFT JOIN detalle_devolucion ddd ON ddd.devolucion_id = dd.id
       ${where}
       GROUP BY v.id
       ORDER BY v.fecha DESC
       LIMIT ${limitNum} OFFSET ${offsetNum}
     `;
 
-    const [rows] = await pool.query(query, params);
+    const [ventas] = await pool.query(query, params);
+
+    // Obtener los combos por cada venta
+    const ventaIds = ventas.map((v) => v.venta_id);
+    let detalleCombos = [];
+
+    if (ventaIds.length) {
+      const [detalleCombosRaw] = await pool.query(
+        `
+        SELECT dvc.*, cb.nombre, cb.descripcion, cb.precio_fijo, cb.cantidad_items
+        FROM detalle_venta_combos dvc
+        JOIN combos cb ON cb.id = dvc.combo_id
+        WHERE dvc.venta_id IN (?)
+      `,
+        [ventaIds]
+      );
+
+      // Agrupar combos por venta
+      detalleCombos = ventaIds.reduce((acc, id) => {
+        acc[id] = detalleCombosRaw
+          .filter((row) => row.venta_id === id)
+          .map((row) => ({
+            id: row.id,
+            combo_id: row.combo_id,
+            venta_id: row.venta_id,
+            cantidad: row.cantidad,
+            precio_combo: row.precio_combo,
+            combo: {
+              id: row.combo_id,
+              nombre: row.nombre,
+              descripcion: row.descripcion,
+              precio_fijo: row.precio_fijo,
+              cantidad_items: row.cantidad_items
+            }
+          }));
+        return acc;
+      }, {});
+    }
+
+    // Agregar los combos a cada venta
+    const ventasConCombos = ventas.map((v) => ({
+      ...v,
+      detalle_venta_combos: detalleCombos[v.venta_id] || []
+    }));
 
     res.json({
       total,
       page: pageNum,
       limit: limitNum,
-      ventas: rows
+      ventas: ventasConCombos
     });
   } catch (err) {
     console.error('Error en /ventas-historial:', err);
     res.status(500).json({ mensajeError: err.message });
   }
 });
+
 
 // GET /ventas/:id/detalle
 app.get('/ventas/:id/detalle', async (req, res) => {

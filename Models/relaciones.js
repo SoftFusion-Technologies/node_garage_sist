@@ -39,6 +39,13 @@ import { RecaptacionCampanasModel } from './Recaptacion/MD_TB_RecaptacionCampana
 import { RecaptacionClientesModel } from './Recaptacion/MD_TB_RecaptacionClientes.js';
 // RELACIONES MODULO DE RECAPTACION
 
+// RELACIONES MODULO DE COMBOS
+import { CombosModel } from './Combos/MD_TB_Combos.js';
+import { ComboProductosPermitidosModel } from './Combos/MD_TB_ComboProductosPermitidos.js';
+import { DetalleVentaCombosModel } from './Combos/MD_TB_DetalleVentaCombos.js';
+import { ComboVentaLogModel } from './Combos/MD_TB_ComboVentaLog.js';
+// RELACIONES MODULO DE COMBOS
+
 // Relaciones de Stock con otras tablas
 StockModel.belongsTo(ProductosModel, { foreignKey: 'producto_id' });
 StockModel.belongsTo(TallesModel, { foreignKey: 'talle_id' });
@@ -157,3 +164,70 @@ RecaptacionClientesModel.belongsTo(RecaptacionCampanasModel, {
 
 // RELACIONES MODULO DE RECAPTACION
 
+// RELACIONES MODULO DE COMBOS
+// Combos tiene muchos productos permitidos
+CombosModel.hasMany(ComboProductosPermitidosModel, {
+  foreignKey: 'combo_id',
+  as: 'productos_permitidos'
+});
+ComboProductosPermitidosModel.belongsTo(CombosModel, {
+  foreignKey: 'combo_id',
+  as: 'combo'
+});
+
+// Productos permitidos por producto y categoría
+ComboProductosPermitidosModel.belongsTo(ProductosModel, {
+  foreignKey: 'producto_id',
+  as: 'producto'
+});
+ComboProductosPermitidosModel.belongsTo(CategoriasModel, {
+  foreignKey: 'categoria_id',
+  as: 'categoria'
+});
+
+// Detalle de venta combos
+DetalleVentaCombosModel.belongsTo(CombosModel, {
+  foreignKey: 'combo_id',
+  as: 'combo'
+});
+DetalleVentaCombosModel.belongsTo(StockModel, {
+  foreignKey: 'stock_id',
+  as: 'stock'
+});
+DetalleVentaCombosModel.belongsTo(VentasModel, {
+  foreignKey: 'venta_id',
+  as: 'venta'
+});
+
+CombosModel.hasMany(DetalleVentaCombosModel, {
+  foreignKey: 'combo_id',
+  as: 'detalles_venta'
+});
+VentasModel.hasMany(DetalleVentaCombosModel, {
+  foreignKey: 'venta_id',
+  as: 'detalle_venta_combos'
+});
+StockModel.hasMany(DetalleVentaCombosModel, {
+  foreignKey: 'stock_id',
+  as: 'detalle_combos'
+});
+
+// ComboVentaLog
+ComboVentaLogModel.belongsTo(VentasModel, {
+  foreignKey: 'venta_id',
+  as: 'venta'
+});
+ComboVentaLogModel.belongsTo(CombosModel, {
+  foreignKey: 'combo_id',
+  as: 'combo'
+});
+
+VentasModel.hasMany(ComboVentaLogModel, {
+  foreignKey: 'venta_id',
+  as: 'combos_vendidos'
+});
+CombosModel.hasMany(ComboVentaLogModel, {
+  foreignKey: 'combo_id',
+  as: 'ventas_log'
+});
+// RELACIONES MODULO DE COMBOS

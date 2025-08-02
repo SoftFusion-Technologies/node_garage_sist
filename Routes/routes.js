@@ -493,4 +493,61 @@ router.delete('/recaptacion-clientes/:id', ER_RecaptacionCliente_CTS);
 import { OBRS_EstadisticasRecaptacion_CTS } from '../Controllers/Analiticas/EstadisticasRecaptacion.js';
 router.get('/recaptacion-estadisticas', OBRS_EstadisticasRecaptacion_CTS);
 
+// -------------------- COMBOS --------------------
+import {
+  OBRS_Combos_CTS,
+  OBR_Combo_CTS,
+  CR_Combo_CTS,
+  UR_Combo_CTS,
+  ER_Combo_CTS,
+  SEARCH_Combos_CTS
+} from '../Controllers/Combos/CTS_TB_Combos.js';
+
+router.get('/combos', OBRS_Combos_CTS); // Obtener todos los combos
+router.get('/combos/:id', OBR_Combo_CTS); // Obtener combo por ID
+router.post('/combos', CR_Combo_CTS); // Crear nuevo combo
+router.put('/combos/:id', UR_Combo_CTS); // Actualizar combo
+router.delete('/combos/:id', ER_Combo_CTS); // Eliminar combo
+router.get('/combos-buscar', SEARCH_Combos_CTS); // Búsqueda por nombre
+
+// -------------------- PRODUCTOS PERMITIDOS EN COMBOS --------------------
+import {
+  OBRS_ComboProductosPermitidos_CTS,
+  OBRS_PermitidosPorCombo_CTS,
+  CR_ComboProductoPermitido_CTS,
+  UR_ComboProductoPermitido_CTS,
+  ER_ComboProductoPermitido_CTS
+} from '../Controllers/Combos/CTS_TB_ComboProductosPermitidos.js';
+
+router.get('/combo-productos-permitidos', OBRS_ComboProductosPermitidos_CTS);
+router.get('/combo-productos-permitidos/:combo_id', OBRS_PermitidosPorCombo_CTS);
+router.post('/combo-productos-permitidos', CR_ComboProductoPermitido_CTS);
+router.put('/combo-productos-permitidos/:id', UR_ComboProductoPermitido_CTS);
+router.delete('/combo-productos-permitidos/:id', ER_ComboProductoPermitido_CTS);
+
+// -------------------- DETALLE DE VENTA COMBOS --------------------
+import {
+  OBRS_DetallesVentaCombo_CTS,
+  OBRS_ProductosPorVentaCombo_CTS,
+  CR_DetallesVentaCombo_CTS,
+  ER_DetalleVentaCombo_CTS
+} from '../Controllers/Combos/CTS_TB_DetalleVentaCombos.js';
+
+router.get('/detalle-venta-combos', OBRS_DetallesVentaCombo_CTS);
+router.get('/detalle-venta-combos/:venta_id', OBRS_ProductosPorVentaCombo_CTS);
+router.post('/detalle-venta-combos', CR_DetallesVentaCombo_CTS);
+router.delete('/detalle-venta-combos/:id', ER_DetalleVentaCombo_CTS);
+
+// -------------------- LOG DE VENTAS DE COMBOS --------------------
+import {
+  OBRS_ComboVentaLog_CTS,
+  OBRS_CombosPorVenta_CTS,
+  CR_ComboVentaLog_CTS,
+  ER_ComboVentaLog_CTS
+} from '../Controllers/Combos/CTS_TB_ComboVentaLog.js';
+
+router.get('/combo-venta-log', OBRS_ComboVentaLog_CTS);
+router.get('/combo-venta-log/:venta_id', OBRS_CombosPorVenta_CTS);
+router.post('/combo-venta-log', CR_ComboVentaLog_CTS);
+router.delete('/combo-venta-log/:id', ER_ComboVentaLog_CTS);
 export default router;
