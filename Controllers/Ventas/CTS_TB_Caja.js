@@ -15,6 +15,8 @@ import MD_TB_Caja from '../../Models/Ventas/MD_TB_Caja.js';
 const CajaModel = MD_TB_Caja.CajaModel;
 import { LocalesModel } from '../../Models/Stock/MD_TB_Locales.js';
 import { UserModel } from '../../Models/MD_TB_Users.js';
+import { MovimientosCajaModel } from '../../Models/Ventas/MD_TB_MovimientosCaja.js';
+
 // Obtener todas las cajas
 export const OBRS_Caja_CTS = async (req, res) => {
   try {
@@ -123,5 +125,35 @@ export const OBRS_CajasAbiertas_CTS = async (req, res) => {
     res.json(abiertas);
   } catch (error) {
     res.status(500).json({ mensajeError: error.message });
+  }
+};
+
+export const getSaldoActualCaja = async (req, res) => {
+  const { caja_id } = req.params;
+
+  try {
+    const caja = await CajaModel.findByPk(caja_id);
+    if (!caja)
+      return res.status(404).json({ mensajeError: 'Caja no encontrada' });
+
+    const movimientos = await MovimientosCajaModel.findAll({
+      where: { caja_id }
+    });
+
+    let totalIngresos = 0;
+    let totalEgresos = 0;
+
+    for (const mov of movimientos) {
+      if (mov.tipo === 'ingreso') totalIngresos += Number(mov.monto);
+      else if (mov.tipo === 'egreso') totalEgresos += Number(mov.monto);
+    }
+
+    const saldo_actual =
+      Number(caja.saldo_inicial) + totalIngresos - totalEgresos;
+
+    res.json({ saldo_actual });
+  } catch (error) {
+    console.error('Error al calcular saldo actual de caja', error);
+    res.status(500).json({ mensajeError: 'Error al calcular saldo actual' });
   }
 };
