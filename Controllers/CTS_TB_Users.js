@@ -13,6 +13,7 @@
 // Importar el modelo
 import MD_TB_Users from '../Models/MD_TB_Users.js';
 import { LocalesModel } from '../Models/Stock/MD_TB_Locales.js';
+import bcrypt from 'bcryptjs';
 
 const UserModel = MD_TB_Users.UserModel;
 
@@ -53,10 +54,14 @@ export const CR_Usuario_CTS = async (req, res) => {
   }
 
   try {
+    // Hashear la contraseña antes de guardar
+    const salt = await bcrypt.genSalt(10); // 10 es el valor estándar de rounds
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     const nuevo = await UserModel.create({
       nombre,
       email,
-      password,
+      password: hashedPassword, // Guardamos la password hasheada
       rol,
       local_id
     });
