@@ -13,15 +13,39 @@
 // Importar el modelo
 import MD_TB_MovimientosCaja from '../../Models/Ventas/MD_TB_MovimientosCaja.js';
 const MovimientosCajaModel = MD_TB_MovimientosCaja.MovimientosCajaModel;
-
-// Obtener todos los movimientos de caja
+import MD_TB_Caja from '../../Models/Ventas/MD_TB_Caja.js';
+const CajaModel = MD_TB_Caja.CajaModel;
+import { LocalesModel } from '../../Models/Stock/MD_TB_Locales.js';
+// Obtener todos los movimientos de caja con información de la caja
 export const OBRS_MovimientosCaja_CTS = async (req, res) => {
   try {
     const movimientos = await MovimientosCajaModel.findAll({
+      include: [
+        {
+          model: CajaModel,
+          as: 'Caja',
+          include: [
+            {
+              model: LocalesModel,
+              as: 'locale',
+              attributes: ['id', 'nombre'] // solo lo necesario
+            }
+          ]
+        }
+      ],
       order: [['id', 'DESC']]
-      // include: [{ model: CajaModel }]
     });
-    res.json(movimientos);
+
+    const resultado = movimientos.map((m) => {
+      const data = m.toJSON();
+      return {
+        ...data,
+        local_id: data.Caja?.local_id ?? null,
+        local_nombre: data.Caja?.locale?.nombre ?? null
+      };
+    });
+
+    res.json(resultado);
   } catch (error) {
     res.status(500).json({ mensajeError: error.message });
   }

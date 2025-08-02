@@ -97,7 +97,10 @@ CajaModel.belongsTo(LocalesModel, { foreignKey: 'local_id' });
 CajaModel.belongsTo(UserModel, { foreignKey: 'usuario_id' });
 
 // (Opcional) Relaciones en relaciones.js:
-MovimientosCajaModel.belongsTo(CajaModel, { foreignKey: 'caja_id' });
+MovimientosCajaModel.belongsTo(CajaModel, {
+  foreignKey: 'caja_id',
+  as: 'Caja'
+});
 
 // RELACIONES MODULO DE VENTAS
 
