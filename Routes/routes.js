@@ -22,6 +22,10 @@ import {
   UR_Local_CTS
 } from '../Controllers/Stock/CTS_TB_Locales.js';
 // Importar controladores de locales
+import {
+  imprimirEtiquetaDemo,
+  imprimirEtiquetasReal
+} from '../Controllers/Stock/StockLabelsController.js';
 
 // Importar controladores de productos
 
@@ -191,6 +195,8 @@ router.put('/estados/:id', UR_Estado_CTS);
 // ----------------------------------------------------------------
 // Rutas para operaciones CRUD en la tabla 'Stock'
 // ----------------------------------------------------------------
+router.get('/stock/labels-demo.pdf', /*authMiddleware,*/ imprimirEtiquetaDemo);
+router.get('/stock/labels.pdf', imprimirEtiquetasReal);
 
 router.get('/stock', OBRS_Stock_CTS);
 router.get('/stock/:id', OBR_Stock_CTS);
@@ -520,7 +526,10 @@ import {
 } from '../Controllers/Combos/CTS_TB_ComboProductosPermitidos.js';
 
 router.get('/combo-productos-permitidos', OBRS_ComboProductosPermitidos_CTS);
-router.get('/combo-productos-permitidos/:combo_id', OBRS_PermitidosPorCombo_CTS);
+router.get(
+  '/combo-productos-permitidos/:combo_id',
+  OBRS_PermitidosPorCombo_CTS
+);
 router.post('/combo-productos-permitidos', CR_ComboProductoPermitido_CTS);
 router.put('/combo-productos-permitidos/:id', UR_ComboProductoPermitido_CTS);
 router.delete('/combo-productos-permitidos/:id', ER_ComboProductoPermitido_CTS);
