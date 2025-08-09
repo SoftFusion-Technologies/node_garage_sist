@@ -20,6 +20,7 @@ import { EstadosModel } from '../../Models/Stock/MD_TB_Estados.js';
 import { DetalleVentaModel } from '../../Models/Ventas/MD_TB_DetalleVenta.js';
 import db from '../../DataBase/db.js'; // Esta es tu instancia Sequelize
 import { Op } from 'sequelize';
+import { Transaction } from 'sequelize';
 
 const StockModel = MD_TB_Stock.StockModel;
 
@@ -182,7 +183,7 @@ export const DISTRIBUIR_Stock_CTS = async (req, res) => {
   const { producto_id, local_id, lugar_id, estado_id, en_perchero, talles } =
     req.body;
 
-  // 1. Validación de datos requeridos
+  // Validación mínima
   if (
     !producto_id ||
     !local_id ||
@@ -191,94 +192,94 @@ export const DISTRIBUIR_Stock_CTS = async (req, res) => {
     !Array.isArray(talles) ||
     talles.length === 0
   ) {
-    return res.status(400).json({
-      mensajeError: 'Faltan datos obligatorios o el array de talles está vacío.'
+    return res
+      .status(400)
+      .json({
+        mensajeError:
+          'Faltan datos obligatorios o el array de talles está vacío.'
+      });
+  }
+
+  // Traer nombres una sola vez (fuera del loop)
+  let producto = null,
+    local = null,
+    lugar = null;
+  try {
+    [producto, local, lugar] = await Promise.all([
+      ProductosModel.findByPk(producto_id),
+      LocalesModel.findByPk(local_id),
+      LugaresModel.findByPk(lugar_id)
+    ]);
+  } catch {
+    /* si falla, sku cae al fallback */
+  }
+
+  // Normalizar y ordenar talles (orden estable para locks)
+  const tallesOrdenados = talles
+    .filter((t) => t?.talle_id && t?.cantidad != null)
+    .map((t) => ({
+      talle_id: Number(t.talle_id),
+      cantidad: Number(t.cantidad) || 0
+    }))
+    .sort((a, b) => a.talle_id - b.talle_id);
+
+  if (tallesOrdenados.length === 0) {
+    return res
+      .status(400)
+      .json({ mensajeError: 'No hay talles válidos para procesar.' });
+  }
+
+  // Preconstruir filas para upsert
+  const filas = [];
+  for (const t of tallesOrdenados) {
+    let nombreTalle = null;
+    try {
+      const talle = await TallesModel.findByPk(t.talle_id);
+      nombreTalle = talle?.nombre || null;
+    } catch {
+      /* ignore */
+    }
+
+    const codigo_sku =
+      producto?.nombre && local?.nombre && lugar?.nombre && nombreTalle
+        ? `${slugify(producto.nombre)}-${(
+            nombreTalle || ''
+          ).toUpperCase()}-${slugify(local.nombre)}-${slugify(lugar.nombre)}`
+        : `${producto_id}-${t.talle_id}-${local_id}-${lugar_id}`;
+
+    filas.push({
+      producto_id,
+      local_id,
+      lugar_id,
+      estado_id,
+      talle_id: t.talle_id,
+      cantidad: t.cantidad,
+      en_perchero: !!en_perchero,
+      codigo_sku
     });
   }
 
-  const transaction = await db.transaction();
+  const t = await db.transaction({
+    isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED
+  });
   try {
-    for (const item of talles) {
-      const { talle_id, cantidad } = item;
-      if (!talle_id || cantidad == null) continue; // Saltar si algún talle está incompleto
+    // UPSERT masivo (evita SELECT previo y evita DELETE+loop)
+    await StockModel.bulkCreate(filas, {
+      updateOnDuplicate: [
+        'cantidad',
+        'en_perchero',
+        'codigo_sku',
+        'updated_at'
+      ],
+      transaction: t
+    });
 
-      // 2. Buscar si ya existe un stock igual (evita duplicados)
-      const stockExistente = await StockModel.findOne({
-        where: {
-          producto_id,
-          talle_id,
-          local_id,
-          lugar_id,
-          estado_id
-        },
-        transaction
-      });
-
-      // 3. Generar SKU robusto (si falla, usar ids)
-      let codigo_sku = '';
-      try {
-        const [producto, talle, local, lugar] = await Promise.all([
-          ProductosModel.findByPk(producto_id),
-          TallesModel.findByPk(talle_id),
-          LocalesModel.findByPk(local_id),
-          LugaresModel.findByPk(lugar_id)
-        ]);
-        codigo_sku = `${slugify(
-          producto?.nombre
-        )}-${talle?.nombre?.toUpperCase()}-${slugify(local?.nombre)}-${slugify(
-          lugar?.nombre
-        )}`;
-      } catch {
-        codigo_sku = `${producto_id}-${talle_id}-${local_id}-${lugar_id}`;
-      }
-
-      // 4. Si ya existe, actualiza; si no, crea uno nuevo
-      if (stockExistente) {
-        await stockExistente.update(
-          { cantidad, en_perchero, codigo_sku },
-          { transaction }
-        );
-        console.log(
-          `[UPDATE] Stock (prod:${producto_id}, talle:${talle_id}) actualizado a ${cantidad}`
-        );
-      } else {
-        // Evita duplicado por si dos requests llegan casi juntos (race condition)
-        try {
-          await StockModel.create(
-            {
-              producto_id,
-              talle_id,
-              local_id,
-              lugar_id,
-              estado_id,
-              cantidad,
-              en_perchero,
-              codigo_sku
-            },
-            { transaction }
-          );
-          console.log(
-            `[CREATE] Stock (prod:${producto_id}, talle:${talle_id}) creado con ${cantidad}`
-          );
-        } catch (err) {
-          if (err.name === 'SequelizeUniqueConstraintError') {
-            // Duplicado justo en el momento (caso raro pero puede pasar)
-            return res.status(409).json({
-              mensajeError:
-                'Ya existe un stock para este producto, talle y ubicación. Recargá y editá el stock existente.'
-            });
-          }
-          throw err;
-        }
-      }
-    }
-
-    await transaction.commit();
-    res.json({ message: 'Stock distribuido correctamente.' });
+    await t.commit();
+    return res.json({ message: 'Stock distribuido correctamente.' });
   } catch (error) {
-    await transaction.rollback();
+    await t.rollback();
     console.error('Error en DISTRIBUIR_Stock_CTS:', error);
-    res.status(500).json({ mensajeError: error.message });
+    return res.status(500).json({ mensajeError: error.message });
   }
 };
 
