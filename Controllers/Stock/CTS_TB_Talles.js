@@ -15,12 +15,80 @@ import MD_TB_Talles from '../../Models/Stock/MD_TB_Talles.js';
 const TallesModel = MD_TB_Talles.TallesModel;
 import { StockModel } from '../../Models/Stock/MD_TB_Stock.js'; // Asegurate de tenerlo
 
+import {
+  parsePagination,
+  buildMeta,
+  buildLinks,
+  buildLikeFilter
+} from '../../Utils/pagination.js';
+
 // Obtener todos los talles
 export const OBRS_Talles_CTS = async (req, res) => {
   try {
-    const talles = await TallesModel.findAll();
-    res.json(talles);
+    const { limit, offset, sort, order } = parsePagination(req.query);
+
+    // Whitelist de columnas ordenables
+    const ORDERABLE = new Set([
+      'id',
+      'nombre',
+      'tipo_categoria',
+      'created_at',
+      'updated_at'
+    ]);
+    const orderBy = ORDERABLE.has(sort) ? [[sort, order]] : [['id', 'ASC']];
+
+    // Filtros
+    const { q, tipo_categoria } = req.query;
+    const where = {};
+
+    // Búsqueda por texto
+    const like = buildLikeFilter(q, ['nombre', 'descripcion']);
+    if (like) Object.assign(where, like);
+
+    // Filtro por tipo de categoría (ropa, calzado, etc.)
+    if (tipo_categoria && tipo_categoria !== 'todos') {
+      where.tipo_categoria = String(tipo_categoria);
+    }
+
+    const { rows, count } = await TallesModel.findAndCountAll({
+      where,
+      limit,
+      offset,
+      order: orderBy
+    });
+
+    const meta = buildMeta({ total: count, limit, offset });
+    const links = buildLinks(req, meta);
+
+    // Header opcional — útil para grids
+    res.set('X-Total-Count', String(count));
+
+    return res.json({ data: rows, meta, links });
   } catch (error) {
+    console.error('❌ OBRS_Talles_CTS:', error);
+    res.status(500).json({ mensajeError: error.message });
+  }
+};
+
+export const OBRS_Talles_All_CTS = async (req, res) => {
+  try {
+    const { tipo_categoria } = req.query;
+
+    const where = {};
+    if (tipo_categoria) where.tipo_categoria = String(tipo_categoria);
+
+    const filas = await TallesModel.findAll({
+      where,
+      attributes: ['id', 'nombre', 'descripcion', 'tipo_categoria'],
+      order: [
+        ['tipo_categoria', 'ASC'],
+        ['nombre', 'ASC']
+      ]
+    });
+
+    res.json(filas); // array directo para selects
+  } catch (error) {
+    console.error('OBRS_Talles_All_CTS:', error);
     res.status(500).json({ mensajeError: error.message });
   }
 };

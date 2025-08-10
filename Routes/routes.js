@@ -45,6 +45,7 @@ import {
 // Importar controladores de talles
 import {
   OBRS_Talles_CTS,
+  OBRS_Talles_All_CTS,
   OBR_Talle_CTS,
   CR_Talle_CTS,
   ER_Talle_CTS,
@@ -110,6 +111,7 @@ import {
 // Importar controladores de categorias
 import {
   OBRS_Categorias_CTS,
+  OBRS_Categorias_All_CTS,
   OBR_Categoria_CTS,
   CR_Categoria_CTS,
   ER_Categoria_CTS,
@@ -149,7 +151,6 @@ router.post(
 
 // Obtener todos los productos
 router.get('/productos', OBRS_Productos_CTS);
-
 // Obtener un producto por ID
 router.get('/productos/:id', OBR_Producto_CTS);
 
@@ -173,6 +174,7 @@ router.post('/deshacer-descuento', DESH_DeshacerDescuento_CTS);
 // ----------------------------------------------------------------
 
 router.get('/talles', OBRS_Talles_CTS);
+router.get('/talles/all', OBRS_Talles_All_CTS);
 router.get('/talles/:id', OBR_Talle_CTS);
 router.post('/talles', CR_Talle_CTS);
 router.delete('/talles/:id', ER_Talle_CTS);
@@ -243,6 +245,7 @@ router.get('/clientes-inactivos', OBRS_ClientesInactivos_CTS);
 // ----------------------------------------------------------------
 
 router.get('/categorias', OBRS_Categorias_CTS);
+router.get('/categorias/all', OBRS_Categorias_All_CTS);
 router.get('/categorias/:id', OBR_Categoria_CTS);
 router.post('/categorias', CR_Categoria_CTS);
 router.delete('/categorias/:id', ER_Categoria_CTS);
