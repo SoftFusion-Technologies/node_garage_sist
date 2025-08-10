@@ -24,6 +24,37 @@ import { Transaction } from 'sequelize';
 
 const StockModel = MD_TB_Stock.StockModel;
 
+// Función para limpiar nombres (similar al front)
+export function slugify(valor) {
+  return String(valor || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // quita acentos
+    .toLowerCase()
+    .replace(/['"]/g, '') // saca comillas
+    .replace(/\((.*?)\)/g, '$1') // quita paréntesis (deja el contenido)
+    .replace(/[^a-z0-9]+/g, '-') // cualquier cosa no alfanumérica -> '-'
+    .replace(/^-+|-+$/g, ''); // recorta guiones al inicio/fin
+}
+
+export function buildSku({
+  productoNombre,
+  talleNombre,
+  localNombre,
+  lugarNombre,
+  maxLen = 150
+}) {
+  const parts = [
+    slugify(productoNombre),
+    (talleNombre || '').toUpperCase(),
+    slugify(localNombre),
+    slugify(lugarNombre)
+  ].filter(Boolean); // evita segmentos vacíos que generen '--'
+
+  let sku = parts.join('-').replace(/-+/g, '-'); // por si acaso, colapsa dobles
+  if (!sku) sku = 'sku'; // fallback mínimo
+  return sku.slice(0, maxLen); // evita "Data too long for column 'codigo_sku'"
+}
+
 // Obtener todos los registros de stock con sus relaciones
 export const OBRS_Stock_CTS = async (req, res) => {
   try {
@@ -192,12 +223,9 @@ export const DISTRIBUIR_Stock_CTS = async (req, res) => {
     !Array.isArray(talles) ||
     talles.length === 0
   ) {
-    return res
-      .status(400)
-      .json({
-        mensajeError:
-          'Faltan datos obligatorios o el array de talles está vacío.'
-      });
+    return res.status(400).json({
+      mensajeError: 'Faltan datos obligatorios o el array de talles está vacío.'
+    });
   }
 
   // Traer nombres una sola vez (fuera del loop)
@@ -242,11 +270,13 @@ export const DISTRIBUIR_Stock_CTS = async (req, res) => {
 
     const codigo_sku =
       producto?.nombre && local?.nombre && lugar?.nombre && nombreTalle
-        ? `${slugify(producto.nombre)}-${(
-            nombreTalle || ''
-          ).toUpperCase()}-${slugify(local.nombre)}-${slugify(lugar.nombre)}`
+        ? buildSku({
+            productoNombre: producto.nombre,
+            talleNombre: nombreTalle,
+            localNombre: local.nombre,
+            lugarNombre: lugar.nombre
+          })
         : `${producto_id}-${t.talle_id}-${local_id}-${lugar_id}`;
-
     filas.push({
       producto_id,
       local_id,
@@ -283,16 +313,6 @@ export const DISTRIBUIR_Stock_CTS = async (req, res) => {
   }
 };
 
-// Función para limpiar nombres (similar al front)
-function slugify(valor) {
-  return String(valor)
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '-')
-    .replace(/-+$/, '');
-}
-
 export const TRANSFERIR_Stock_CTS = async (req, res) => {
   const { grupoOriginal, nuevoGrupo, talles } = req.body;
 
@@ -308,6 +328,17 @@ export const TRANSFERIR_Stock_CTS = async (req, res) => {
   }
 
   const transaction = await db.transaction();
+  // Traer nombres del destino una sola vez
+  let prodNuevo = null,
+    localNuevo = null,
+    lugarNuevo = null;
+  try {
+    [prodNuevo, localNuevo, lugarNuevo] = await Promise.all([
+      ProductosModel.findByPk(nuevoGrupo.producto_id),
+      LocalesModel.findByPk(nuevoGrupo.local_id),
+      LugaresModel.findByPk(nuevoGrupo.lugar_id)
+    ]);
+  } catch {}
 
   try {
     for (const { talle_id, cantidad } of talles) {
@@ -374,7 +405,23 @@ export const TRANSFERIR_Stock_CTS = async (req, res) => {
         );
       } else {
         // Armado de SKU (podés hacerlo más descriptivo si querés)
-        const nuevoSKU = `${nuevoGrupo.producto_id}-${talle_id}-${nuevoGrupo.local_id}-${nuevoGrupo.lugar_id}`;
+        let nombreTalle = null;
+        try {
+          const tRow = await TallesModel.findByPk(talle_id, { transaction });
+          nombreTalle = tRow?.nombre || null;
+        } catch {}
+        const nuevoSKU =
+          prodNuevo?.nombre &&
+          localNuevo?.nombre &&
+          lugarNuevo?.nombre &&
+          nombreTalle
+            ? buildSku({
+                productoNombre: prodNuevo.nombre,
+                talleNombre: nombreTalle,
+                localNombre: localNuevo.nombre,
+                lugarNombre: lugarNuevo.nombre
+              })
+            : `${nuevoGrupo.producto_id}-${talle_id}-${nuevoGrupo.local_id}-${nuevoGrupo.lugar_id}`;
         await StockModel.create(
           {
             producto_id: nuevoGrupo.producto_id,
@@ -460,5 +507,180 @@ export const ER_StockPorGrupo = async (req, res) => {
     return res
       .status(500)
       .json({ mensajeError: mensaje + (error.message || '') });
+  }
+};
+
+export const DUPLICAR_Producto_CTS = async (req, res) => {
+  const sourceId = Number(req.params.id);
+  const {
+    nuevoNombre,
+    duplicarStock = true,
+    copiarCantidad = false,
+    locales, // opcional: [1,2,5]
+    generarSku = true // ⬅️ por defecto generamos SKU ahora
+  } = req.body || {};
+
+  if (!sourceId || !nuevoNombre?.trim()) {
+    return res
+      .status(400)
+      .json({ mensajeError: 'Falta sourceId o nuevoNombre válido.' });
+  }
+
+  const t = await db.transaction({
+    isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED
+  });
+
+  // helper interno para asegurar unicidad de (codigo_sku, local_id)
+  const ensureUniqueSku = async (baseSku, localId, excludeId = null) => {
+    let candidate = baseSku;
+    let i = 1;
+    // Intentos con sufijos -2, -3, ...
+    // (i=1 => sin sufijo; i>=2 => -i)
+    // Cortamos a 150 chars por seguridad
+    // Nota: excludeId evita chocar consigo mismo
+    //       (cuando ya hay fila con ese id en esta misma tx).
+    // Si hay muchos duplicados con el mismo nombre, sigue incrementando.
+    // En la práctica no deberías superar unas pocas iteraciones.
+    //
+    // Usamos findOne con la transacción para ver estado consistente.
+    /* eslint-disable no-constant-condition */
+    while (true) {
+      const exists = await StockModel.findOne({
+        where: {
+          codigo_sku: candidate,
+          local_id: localId,
+          ...(excludeId ? { id: { [Op.ne]: excludeId } } : {})
+        },
+        transaction: t
+      });
+
+      if (!exists) return candidate;
+
+      i += 1;
+      const suffix = `-${i}`;
+      const base = baseSku.slice(0, 150 - suffix.length);
+      candidate = `${base}${suffix}`;
+    }
+  };
+
+  try {
+    // 1) Producto origen
+    const prod = await ProductosModel.findByPk(sourceId, { transaction: t });
+    if (!prod) {
+      await t.rollback();
+      return res
+        .status(404)
+        .json({ mensajeError: 'Producto origen no encontrado.' });
+    }
+
+    // 2) Crear nuevo producto (misma lógica de create)
+    const precioNum = prod.precio ? Number(prod.precio) : 0;
+    const descNum = prod.descuento_porcentaje
+      ? Number(prod.descuento_porcentaje)
+      : 0;
+    const precioConDesc =
+      descNum > 0
+        ? Number((precioNum - precioNum * (descNum / 100)).toFixed(2))
+        : precioNum;
+
+    const nuevoProducto = await ProductosModel.create(
+      {
+        nombre: nuevoNombre.trim(),
+        descripcion: prod.descripcion,
+        categoria_id: prod.categoria_id,
+        precio: precioNum,
+        descuento_porcentaje: descNum > 0 ? descNum : null,
+        precio_con_descuento: precioConDesc,
+        imagen_url: prod.imagen_url,
+        estado: prod.estado // 'activo' | 'inactivo'
+      },
+      { transaction: t }
+    );
+
+    // 3) (opcional) duplicar estructura de stock
+    let filasStockCreadas = 0;
+    if (duplicarStock) {
+      const whereStock = { producto_id: sourceId };
+      if (Array.isArray(locales) && locales.length > 0) {
+        whereStock.local_id = { [Op.in]: locales.map(Number) };
+      }
+
+      const stockOrigen = await StockModel.findAll({
+        where: whereStock,
+        attributes: [
+          'talle_id',
+          'local_id',
+          'lugar_id',
+          'estado_id',
+          'cantidad',
+          'en_perchero'
+        ],
+        transaction: t
+      });
+
+      if (stockOrigen.length > 0) {
+        // Primero insertamos con codigo_sku NULL para no chocar UNIQUE
+        const filas = stockOrigen.map((s) => ({
+          producto_id: nuevoProducto.id,
+          talle_id: s.talle_id,
+          local_id: s.local_id,
+          lugar_id: s.lugar_id,
+          estado_id: s.estado_id,
+          cantidad: copiarCantidad ? Number(s.cantidad || 0) : 0, // por defecto NO copiamos inventario
+          en_perchero: !!s.en_perchero,
+          codigo_sku: null
+        }));
+
+        await StockModel.bulkCreate(filas, {
+          transaction: t,
+          ignoreDuplicates: true // ux_stock protege por si hubiera ruido previo
+        });
+
+        filasStockCreadas = filas.length;
+
+        // 🔹 Generar SKUs ahora (legibles + únicos por local)
+        if (generarSku) {
+          // Necesitamos los nombres de talle/local/lugar para armar el SKU
+          const nuevos = await StockModel.findAll({
+            where: { producto_id: nuevoProducto.id },
+            include: [
+              { model: TallesModel, as: 'talle', attributes: ['nombre'] },
+              { model: LocalesModel, as: 'locale', attributes: ['nombre'] },
+              { model: LugaresModel, as: 'lugare', attributes: ['nombre'] }
+            ],
+            transaction: t
+          });
+
+          // Hacemos update por fila para poder resolver colisiones de UNIQUE
+          for (const s of nuevos) {
+            const base = buildSku({
+              productoNombre: nuevoProducto.nombre,
+              talleNombre: s.talle?.nombre,
+              localNombre: s.locale?.nombre,
+              lugarNombre: s.lugare?.nombre
+            });
+
+            const unique = await ensureUniqueSku(base, s.local_id, s.id);
+
+            // Actualizamos solo si cambió (evita writes innecesarios)
+            if (s.codigo_sku !== unique) {
+              await s.update({ codigo_sku: unique }, { transaction: t });
+            }
+          }
+        }
+      }
+    }
+
+    await t.commit();
+    return res.json({
+      message: 'Producto duplicado correctamente',
+      nuevo_producto_id: nuevoProducto.id,
+      duplicoStock: !!duplicarStock,
+      filasStockCreadas
+    });
+  } catch (err) {
+    await t.rollback();
+    console.error('❌ Error DUPLICAR_Producto_CTS:', err);
+    return res.status(500).json({ mensajeError: err.message });
   }
 };

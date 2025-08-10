@@ -82,7 +82,8 @@ import {
   ER_StockPorProducto,
   DISTRIBUIR_Stock_CTS,
   TRANSFERIR_Stock_CTS,
-  ER_StockPorGrupo
+  ER_StockPorGrupo,
+  DUPLICAR_Producto_CTS
 } from '../Controllers/Stock/CTS_TB_Stock.js';
 
 // Importar controladores de usuarios
@@ -140,6 +141,11 @@ router.put('/locales/:id', UR_Local_CTS);
 // ----------------------------------------------------------------
 // Rutas para operaciones CRUD en la tabla 'productos'
 // ----------------------------------------------------------------
+
+router.post(
+  '/productos/:id/duplicar',
+  /*authMiddleware,*/ DUPLICAR_Producto_CTS
+);
 
 // Obtener todos los productos
 router.get('/productos', OBRS_Productos_CTS);
