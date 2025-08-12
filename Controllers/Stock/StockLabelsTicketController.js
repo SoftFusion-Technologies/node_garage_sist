@@ -9,6 +9,7 @@ import { TallesModel } from '../../Models/Stock/MD_TB_Talles.js';
 import { LocalesModel } from '../../Models/Stock/MD_TB_Locales.js';
 import { LugaresModel } from '../../Models/Stock/MD_TB_Lugares.js';
 import { EstadosModel } from '../../Models/Stock/MD_TB_Estados.js';
+import { encodeNumericSku } from '../../Utils/skuNumeric.js';
 
 /* --------------------------------- Medidas --------------------------------- */
 const cmToPt = (cm) => cm * 28.3464567; // 1 cm = 28.3464567 pt
@@ -256,7 +257,10 @@ export const imprimirEtiquetasTicket = async (req, res) => {
     text_mode = 'middle', // 'end' | 'middle' | 'wrap' | 'shrink' | 'full'
     text_lines,
     min_font_pt = '3.5',
-    min_barcode_mm = '6' // mínimo de barras en 'full'
+    min_barcode_mm = '6', // mínimo de barras en 'full'
+    barcode_src = 'numeric',
+    text_gap_mm = '1.5',
+    text_value = 'auto'
   } = req.query;
 
   try {
@@ -330,10 +334,11 @@ export const imprimirEtiquetasTicket = async (req, res) => {
 
     // Cache PNGs por (sku + width + dpi + heightMm)
     const barcodeCache = new Map();
-    const getBarcode = async (sku, widthPt, effHeightMm) => {
-      const key = `${sku}|${Math.round(widthPt)}|${dpi}|${effHeightMm}`;
+
+    const getBarcode = async (value, widthPt, effHeightMm) => {
+      const key = `${value}|${Math.round(widthPt)}|${dpi}|${effHeightMm}`;
       if (!barcodeCache.has(key)) {
-        const png = await barcodePngFit(sku, {
+        const png = await barcodePngFit(String(value), {
           widthPt,
           dpi,
           heightMm: effHeightMm
@@ -345,7 +350,15 @@ export const imprimirEtiquetasTicket = async (req, res) => {
 
     /* eslint-disable no-await-in-loop */
     for (const it of items) {
-      const sku = it.codigo_sku;
+      const visibleSku = it.codigo_sku; // slug actual (texto humano)
+      const numericSku = encodeNumericSku({
+        producto_id: it.producto_id,
+        talle_id: it.talle_id,
+        local_id: it.local_id,
+        lugar_id: it.lugar_id,
+        estado_id: it.estado_id ?? 0
+      });
+
       const copias =
         copies === 'qty' ? Math.max(1, Number(it.cantidad || 0)) : 1;
 
@@ -356,42 +369,65 @@ export const imprimirEtiquetasTicket = async (req, res) => {
           y0 = Q;
         const widthPt = Math.max(1, W - Q - Q);
         const heightPt = Math.max(1, H - Q - Q);
+        const gapPt = mmToPt(Number(text_gap_mm)); // ← separación entre barra y texto
 
-        // Distribución vertical
+        // Elegimos qué valor va en el BARCODE y qué texto humano mostramos
+        const barcodeValue =
+          barcode_src === 'numeric' ? numericSku : String(visibleSku);
+        const humanText =
+          text_value === 'none'
+            ? ''
+            : text_value === 'slug'
+            ? visibleSku
+            : text_value === 'numeric'
+            ? numericSku
+            : // auto:
+            barcode_src === 'numeric'
+            ? numericSku
+            : visibleSku;
+
+        // Cálculo de alturas
         let barcodeHpt, textMaxHpt;
-        if (showSkuText && text_mode === 'full') {
+        const showText = showSkuText && humanText; // solo si hay algo que mostrar
+
+        if (showText && text_mode === 'full') {
+          // mínimo de barras + el resto para texto, con gap
           barcodeHpt = mmToPt(Number(min_barcode_mm));
           barcodeHpt = Math.min(barcodeHpt, heightPt - 1);
-          textMaxHpt = Math.max(0, heightPt - barcodeHpt);
+          textMaxHpt = Math.max(0, heightPt - barcodeHpt - gapPt);
         } else {
-          const textH = showSkuText
+          // reserva estática según modo, + gap si hay texto
+          const fontPtNum = Number(font_pt);
+          const textH = showText
             ? text_mode === 'wrap'
-              ? textLines * (fontPtNum + 1)
+              ? Number(text_lines || 2) * (fontPtNum + 1)
               : fontPtNum + 2
             : 0;
-          textMaxHpt = textH;
+          textMaxHpt = textH + (showText ? gapPt : 0);
           barcodeHpt = Math.max(1, heightPt - textMaxHpt);
         }
 
         const effHeightMm = height_mm
           ? Number(height_mm)
           : Math.max(4, Math.round(ptToMm(barcodeHpt)));
-        const png = await getBarcode(sku, widthPt, effHeightMm);
 
-        // Dibujo barcode
+        const png = await getBarcode(barcodeValue, widthPt, effHeightMm);
+
+        // 1) Dibujo barras
         doc.image(png, x0, y0, { width: widthPt, height: barcodeHpt });
 
-        // Dibujo texto
-        if (showSkuText) {
-          drawSkuText(doc, sku, {
+        // 2) Dibujo texto humano con el gap
+        if (showText) {
+          const yText = y0 + barcodeHpt + gapPt; // ← SEPARACIÓN AQUÍ
+          drawSkuText(doc, humanText, {
             x: x0,
-            y: y0 + barcodeHpt - 1,
+            y: yText,
             widthPt,
             mode: String(text_mode || 'middle'),
-            fontPt: fontPtNum,
+            fontPt: Number(font_pt),
             minPt: Number(min_font_pt || 3.5),
-            lines: textLines,
-            maxHeightPt: textMaxHpt // usado en 'full'
+            lines: Number(text_lines || (text_mode === 'wrap' ? 2 : 1)),
+            maxHeightPt: text_mode === 'full' ? textMaxHpt : undefined
           });
         }
       }
