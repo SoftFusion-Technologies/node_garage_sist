@@ -27,6 +27,10 @@ import {
   imprimirEtiquetasReal
 } from '../Controllers/Stock/StockLabelsController.js';
 
+import {
+  imprimirEtiquetaTicketDemo,
+  imprimirEtiquetasTicket
+} from '../Controllers/Stock/StockLabelsTicketController.js';
 // Importar controladores de productos
 
 import {
@@ -205,6 +209,9 @@ router.put('/estados/:id', UR_Estado_CTS);
 // ----------------------------------------------------------------
 router.get('/stock/labels-demo.pdf', /*authMiddleware,*/ imprimirEtiquetaDemo);
 router.get('/stock/labels.pdf', imprimirEtiquetasReal);
+
+router.get('/stock/etiquetas/ticket/demo', imprimirEtiquetaTicketDemo);
+router.get('/stock/etiquetas/ticket', imprimirEtiquetasTicket);
 
 router.get('/stock', OBRS_Stock_CTS);
 router.get('/stock/:id', OBR_Stock_CTS);
