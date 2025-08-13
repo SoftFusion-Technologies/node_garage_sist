@@ -345,6 +345,51 @@ export const imprimirEtiquetasTicket = async (req, res) => {
       });
     } else if (mode === 'all') {
       Object.assign(where, { cantidad: { [Op.gte]: Number(minQty) } });
+    } else if (mode === 'multi') {
+      // NUEVO: lista de combinaciones [{ producto_id, local_id, lugar_id, estado_id }, ...]
+      let groups = [];
+      try {
+        const raw = req.query.groups || '[]';
+        groups = JSON.parse(typeof raw === 'string' ? raw : '[]');
+      } catch (e) {
+        return res.status(400).json({ mensajeError: 'groups inválido' });
+      }
+      if (!Array.isArray(groups) || groups.length === 0) {
+        return res.status(400).json({ mensajeError: 'groups vacío' });
+      }
+
+      // Normalizamos y validamos cada combinación
+      const combos = groups
+        .map((g) => ({
+          producto_id: Number(g.producto_id),
+          local_id: Number(g.local_id),
+          lugar_id: Number(g.lugar_id),
+          estado_id: Number(g.estado_id)
+        }))
+        .filter(
+          (g) =>
+            Number.isFinite(g.producto_id) &&
+            Number.isFinite(g.local_id) &&
+            Number.isFinite(g.lugar_id) &&
+            Number.isFinite(g.estado_id)
+        );
+
+      if (!combos.length) {
+        return res
+          .status(400)
+          .json({ mensajeError: 'groups sin combinaciones válidas' });
+      }
+
+      // cantidad > minQty y (OR de combinaciones)
+      Object.assign(where, {
+        cantidad: { [Op.gte]: Number(minQty) },
+        [Op.or]: combos.map((g) => ({
+          producto_id: g.producto_id,
+          local_id: g.local_id,
+          lugar_id: g.lugar_id,
+          estado_id: g.estado_id
+        }))
+      });
     } else {
       return res.status(400).json({ mensajeError: 'mode inválido' });
     }
@@ -454,6 +499,8 @@ export const imprimirEtiquetasTicket = async (req, res) => {
 
         const barcodeValue =
           barcode_src === 'numeric' ? numericSku : String(visibleSku);
+
+        const productName = (it.producto?.nombre || '').toUpperCase(); // legible
         const humanText =
           text_value === 'none'
             ? ''
@@ -461,7 +508,10 @@ export const imprimirEtiquetasTicket = async (req, res) => {
             ? visibleSku
             : text_value === 'numeric'
             ? numericSku
-            : barcode_src === 'numeric'
+            : text_value === 'name'
+            ? productName
+            : // auto:
+            barcode_src === 'numeric'
             ? numericSku
             : visibleSku;
 
