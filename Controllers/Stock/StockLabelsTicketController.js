@@ -17,19 +17,44 @@ const mmToPt = (mm) => (mm / 10) * 28.3464567;
 const ptToPx = (pt, dpi) => Math.round((pt / 72) * dpi);
 const ptToMm = (pt) => (pt / 72) * 25.4;
 
-/* ------------------- Barcode Code128 con ancho forzado --------------------- */
-// Genera PNG del Code128 forzando el ancho del símbolo (en px) al ancho útil.
-const barcodePngFit = (text, { widthPt, dpi = 203, heightMm = 8 } = {}) =>
+/* ----------------------- Generadores 1D (Code128) / 2D (QR) ---------------- */
+// Code128 robusto: ancho forzado, altura suficiente y quiet-zone interna opcional
+const barcodePngCode128 = (
+  text,
+  { widthPt, dpi = 203, heightMm = 12, padPx = 0 } = {}
+) =>
   new Promise((resolve, reject) => {
-    const widthPx = ptToPx(widthPt, dpi); // ancho objetivo en px
+    const widthPx = ptToPx(widthPt, dpi);
     bwipjs.toBuffer(
       {
         bcid: 'code128',
         text: String(text),
         includetext: false,
-        width: widthPx, // clave para SKUs largos: ocupar todo el ancho
-        height: Number(heightMm) // altura de barras en mm
-        // si el lector pide más quiet zone: paddingwidth / paddingheight (px)
+        width: widthPx, // fuerza ocupar todo el ancho útil
+        height: Number(heightMm), // altura de barras (mm): 10–14 recomendado
+        paddingwidth: padPx, // quiet-zone interna en px por lado
+        paddingheight: 0,
+        monochrome: true
+      },
+      (err, png) => (err ? reject(err) : resolve(png))
+    );
+  });
+
+// QR (ideal para lector 2D en 30×15)
+const barcodePngQr = (
+  text,
+  { sidePt, dpi = 203, version = 2, eclevel = 'M' } = {}
+) =>
+  new Promise((resolve, reject) => {
+    const sidePx = ptToPx(sidePt, dpi);
+    bwipjs.toBuffer(
+      {
+        bcid: 'qrcode',
+        text: String(text),
+        version: Number(version) || 2, // v2 (25×25) alcanza para 18 dígitos
+        eclevel: String(eclevel || 'M'),
+        width: sidePx,
+        monochrome: true
       },
       (err, png) => (err ? reject(err) : resolve(png))
     );
@@ -56,7 +81,6 @@ const fitFontForBlock = (
   let lo = minPt,
     hi = maxPt,
     best = minPt;
-  // binsearch simple
   for (let i = 0; i < 24; i++) {
     const mid = (lo + hi) / 2;
     doc.fontSize(mid);
@@ -95,7 +119,6 @@ const drawSkuText = (
   const text = String(sku);
 
   if (mode === 'full') {
-    // Ajuste automático de fuente con wrap para que entre COMPLETO en maxHeightPt
     const size = fitFontForBlock(
       doc,
       text,
@@ -107,7 +130,7 @@ const drawSkuText = (
     doc
       .fontSize(size)
       .text(text, x, y, { width: widthPt, align: 'center', lineGap: 0 });
-    return size + 2; // alto aproximado de última línea, no se usa para reservar (ya se reservó afuera)
+    return size + 2;
   }
 
   if (mode === 'wrap' && lines > 1) {
@@ -119,12 +142,12 @@ const drawSkuText = (
   }
 
   if (mode === 'shrink') {
-    const size = fitFontForBlock(doc, text, widthPt, fontPt + 2, fontPt, minPt); // aprox una línea
+    const size = fitFontForBlock(doc, text, widthPt, fontPt + 2, fontPt, minPt);
     doc.fontSize(size).text(text, x, y, { width: widthPt, align: 'center' });
     return size + 2;
   }
 
-  // end / middle con elipsis manual
+  // end / middle con elipsis
   const maxChars = 22;
   const legible =
     mode === 'middle'
@@ -140,18 +163,23 @@ const drawSkuText = (
 export const imprimirEtiquetaTicketDemo = async (req, res) => {
   try {
     const {
-      sku = 'DEMO-12345',
-      showText = '1', // '1' muestra texto humano
-      ancho_cm = '3', // 3 cm
-      alto_cm = '1.5', // 1.5 cm
-      quiet_mm = '2', // quiet zone
-      font_pt = '6', // tamaño base del texto
-      height_mm, // si no viene, se calcula del espacio disponible
-      min_barcode_mm = '6', // altura mínima del barcode (mm) para 'full'
-      dpi: dpiQuery = '203', // 203 o 300
-      text_mode = 'middle', // 'end' | 'middle' | 'wrap' | 'shrink' | 'full'
-      text_lines, // para 'wrap' (default 2)
-      min_font_pt = '3.5' // mínimo para 'full'/'shrink'
+      sku = 'DEMO-1234567890123456',
+      showText = '0', // ↓ por defecto sin texto para priorizar lectura
+      ancho_cm = '3',
+      alto_cm = '1.5',
+      quiet_mm = '3',
+      font_pt = '6',
+      height_mm,
+      min_barcode_mm = '12',
+      dpi: dpiQuery = '203',
+      text_mode = 'middle',
+      text_lines,
+      min_font_pt = '3.5',
+      // NUEVOS:
+      symb = 'code128', // 'code128' | 'qrcode'
+      qr_version = '2',
+      qr_eclevel = 'M',
+      pad_modules = '6' // quiet interna aprox (bwip -> px)
     } = req.query;
 
     const W = cmToPt(Number(ancho_cm));
@@ -161,6 +189,7 @@ export const imprimirEtiquetaTicketDemo = async (req, res) => {
     const showSkuText = showText === '1' || showText === 'true';
     const fontPtNum = Number(font_pt);
     const textLines = Number(text_lines || (text_mode === 'wrap' ? 2 : 1));
+    const padPx = Math.max(0, Number(pad_modules || 0)); // ~1px por módulo
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
@@ -178,55 +207,78 @@ export const imprimirEtiquetaTicketDemo = async (req, res) => {
     const widthPt = Math.max(1, W - Q - Q);
     const heightPt = Math.max(1, H - Q - Q);
 
-    // Distribución vertical
-    let barcodeHpt, textMaxHpt;
-    if (showSkuText && text_mode === 'full') {
-      // barcode mínimo + todo el resto para texto
-      barcodeHpt = mmToPt(Number(min_barcode_mm));
-      barcodeHpt = Math.min(barcodeHpt, heightPt - 1); // no exceder
-      textMaxHpt = Math.max(0, heightPt - barcodeHpt);
-    } else {
-      // reserva estática según modo
-      const textH = showSkuText
-        ? text_mode === 'wrap'
-          ? textLines * (fontPtNum + 1)
-          : fontPtNum + 2
-        : 0;
-      textMaxHpt = textH;
-      barcodeHpt = Math.max(1, heightPt - textMaxHpt);
-    }
-
-    // Altura efectiva (mm) del barcode, si no vino por query
-    const effHeightMm = height_mm
-      ? Number(height_mm)
-      : Math.max(4, Math.round(ptToMm(barcodeHpt)));
-
-    // Generar barcode ajustado al ancho
-    const png = await barcodePngFit(sku, {
-      widthPt,
-      dpi,
-      heightMm: effHeightMm
-    });
-
-    // Dibujo barcode
-    doc.image(png, x0, y0, { width: widthPt, height: barcodeHpt });
-
-    const preserveCopyHyphen = (req.query.preserve_copy_hyphen ?? '1') !== '0';
-
-    // Dibujo texto
-    if (showSkuText) {
-      const yText = y0 + barcodeHpt - 1;
-      drawSkuText(doc, sku, {
-        x: x0,
-        y: yText,
-        widthPt,
-        mode: String(text_mode || 'middle'),
-        fontPt: fontPtNum,
-        minPt: Number(min_font_pt || 3.5),
-        lines: textLines,
-        maxHeightPt: textMaxHpt, // usado en 'full'
-        preserveHyphen: preserveCopyHyphen
+    if (symb === 'qrcode') {
+      // QR cuadrado ocupando el alto (≈15mm)
+      const sidePt = Math.min(widthPt, heightPt);
+      const png = await barcodePngQr(sku, {
+        sidePt,
+        dpi,
+        version: qr_version,
+        eclevel: qr_eclevel
       });
+      doc.image(png, x0 + (widthPt - sidePt) / 2, y0, {
+        width: sidePt,
+        height: sidePt
+      });
+
+      if (showSkuText) {
+        const yText = y0 + sidePt + mmToPt(1.5);
+        if (yText < y0 + heightPt) {
+          drawSkuText(doc, sku, {
+            x: x0,
+            y: yText,
+            widthPt,
+            mode: String(text_mode || 'middle'),
+            fontPt: fontPtNum,
+            minPt: Number(min_font_pt || 3.5),
+            lines: textLines
+          });
+        }
+      }
+    } else {
+      // Code128
+      // Distribución vertical
+      let barcodeHpt, textMaxHpt;
+      if (showSkuText && text_mode === 'full') {
+        barcodeHpt = mmToPt(Number(min_barcode_mm));
+        barcodeHpt = Math.min(barcodeHpt, heightPt - 1);
+        textMaxHpt = Math.max(0, heightPt - barcodeHpt - mmToPt(1.5));
+      } else {
+        const textH = showSkuText
+          ? text_mode === 'wrap'
+            ? textLines * (fontPtNum + 1)
+            : fontPtNum + 2
+          : 0;
+        textMaxHpt = textH + (showSkuText ? mmToPt(1.5) : 0);
+        barcodeHpt = Math.max(1, heightPt - textMaxHpt);
+      }
+
+      const effHeightMm = height_mm
+        ? Number(height_mm)
+        : Math.max(10, Math.round(ptToMm(barcodeHpt))); // mínimo 10mm
+
+      const png = await barcodePngCode128(sku, {
+        widthPt,
+        dpi,
+        heightMm: effHeightMm,
+        padPx
+      });
+
+      doc.image(png, x0, y0, { width: widthPt, height: barcodeHpt });
+
+      if (showSkuText) {
+        const yText = y0 + barcodeHpt + mmToPt(1.5);
+        drawSkuText(doc, sku, {
+          x: x0,
+          y: yText,
+          widthPt,
+          mode: String(text_mode || 'middle'),
+          fontPt: fontPtNum,
+          minPt: Number(min_font_pt || 3.5),
+          lines: textLines,
+          maxHeightPt: textMaxHpt
+        });
+      }
     }
 
     doc.end();
@@ -249,18 +301,28 @@ export const imprimirEtiquetasTicket = async (req, res) => {
     // Layout/impresora
     ancho_cm = '3',
     alto_cm = '1.5',
-    quiet_mm = '2',
+    quiet_mm = '3', // ↑ margen externo recomendado
     font_pt = '6',
     height_mm, // si no viene, se calcula del espacio
-    showText = '1',
+    showText = '0', // ↓ por defecto sin texto (más alto para barras)
     dpi: dpiQuery = '203',
-    text_mode = 'middle', // 'end' | 'middle' | 'wrap' | 'shrink' | 'full'
+    text_mode = 'middle',
     text_lines,
     min_font_pt = '3.5',
-    min_barcode_mm = '6', // mínimo de barras en 'full'
-    barcode_src = 'numeric',
+    min_barcode_mm = '12', // ↑ altura mínima recomendada para 203dpi
+
+    // Valor del código
+    barcode_src = 'numeric', // 'numeric' (IDs) | 'legacy' (slug)
+
+    // Texto visible
     text_gap_mm = '1.5',
-    text_value = 'auto'
+    text_value = 'auto', // 'auto'|'slug'|'numeric'|'none'
+
+    // NUEVOS: simbología
+    symb = 'code128', // 'code128' | 'qrcode'
+    qr_version = '2',
+    qr_eclevel = 'M',
+    pad_modules = '6' // quiet interna (px aprox) para Code128
   } = req.query;
 
   try {
@@ -322,6 +384,8 @@ export const imprimirEtiquetasTicket = async (req, res) => {
     const showSkuText = showText === '1' || showText === 'true';
     const fontPtNum = Number(font_pt);
     const textLines = Number(text_lines || (text_mode === 'wrap' ? 2 : 1));
+    const padPx = Math.max(0, Number(pad_modules || 0));
+    const gapPt = mmToPt(Number(text_gap_mm));
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
@@ -332,17 +396,35 @@ export const imprimirEtiquetasTicket = async (req, res) => {
     const doc = new PDFDocument({ autoFirstPage: false });
     doc.pipe(res);
 
-    // Cache PNGs por (sku + width + dpi + heightMm)
+    // Cache PNGs por (symb + valor + geom)
     const barcodeCache = new Map();
-
-    const getBarcode = async (value, widthPt, effHeightMm) => {
-      const key = `${value}|${Math.round(widthPt)}|${dpi}|${effHeightMm}`;
+    const getBarcode = async (
+      value,
+      widthPt,
+      effHeightMm,
+      symbUsed,
+      sqSidePt
+    ) => {
+      const key = `${symbUsed}|${value}|${Math.round(widthPt)}|${dpi}|${
+        effHeightMm || 0
+      }|${Math.round(sqSidePt || 0)}|${padPx}|${qr_version}|${qr_eclevel}`;
       if (!barcodeCache.has(key)) {
-        const png = await barcodePngFit(String(value), {
-          widthPt,
-          dpi,
-          heightMm: effHeightMm
-        });
+        let png;
+        if (symbUsed === 'qrcode') {
+          png = await barcodePngQr(String(value), {
+            sidePt: sqSidePt,
+            dpi,
+            version: qr_version,
+            eclevel: qr_eclevel
+          });
+        } else {
+          png = await barcodePngCode128(String(value), {
+            widthPt,
+            dpi,
+            heightMm: effHeightMm,
+            padPx
+          });
+        }
         barcodeCache.set(key, png);
       }
       return barcodeCache.get(key);
@@ -359,19 +441,17 @@ export const imprimirEtiquetasTicket = async (req, res) => {
         estado_id: it.estado_id ?? 0
       });
 
-      const copias =
+      const copiesCount =
         copies === 'qty' ? Math.max(1, Number(it.cantidad || 0)) : 1;
 
-      for (let i = 0; i < copias; i++) {
+      for (let i = 0; i < copiesCount; i++) {
         doc.addPage({ size: [W, H], margin: 0 });
 
         const x0 = Q,
           y0 = Q;
         const widthPt = Math.max(1, W - Q - Q);
         const heightPt = Math.max(1, H - Q - Q);
-        const gapPt = mmToPt(Number(text_gap_mm)); // ← separación entre barra y texto
 
-        // Elegimos qué valor va en el BARCODE y qué texto humano mostramos
         const barcodeValue =
           barcode_src === 'numeric' ? numericSku : String(visibleSku);
         const humanText =
@@ -381,54 +461,83 @@ export const imprimirEtiquetasTicket = async (req, res) => {
             ? visibleSku
             : text_value === 'numeric'
             ? numericSku
-            : // auto:
-            barcode_src === 'numeric'
+            : barcode_src === 'numeric'
             ? numericSku
             : visibleSku;
 
-        // Cálculo de alturas
-        let barcodeHpt, textMaxHpt;
-        const showText = showSkuText && humanText; // solo si hay algo que mostrar
-
-        if (showText && text_mode === 'full') {
-          // mínimo de barras + el resto para texto, con gap
-          barcodeHpt = mmToPt(Number(min_barcode_mm));
-          barcodeHpt = Math.min(barcodeHpt, heightPt - 1);
-          textMaxHpt = Math.max(0, heightPt - barcodeHpt - gapPt);
-        } else {
-          // reserva estática según modo, + gap si hay texto
-          const fontPtNum = Number(font_pt);
-          const textH = showText
-            ? text_mode === 'wrap'
-              ? Number(text_lines || 2) * (fontPtNum + 1)
-              : fontPtNum + 2
-            : 0;
-          textMaxHpt = textH + (showText ? gapPt : 0);
-          barcodeHpt = Math.max(1, heightPt - textMaxHpt);
-        }
-
-        const effHeightMm = height_mm
-          ? Number(height_mm)
-          : Math.max(4, Math.round(ptToMm(barcodeHpt)));
-
-        const png = await getBarcode(barcodeValue, widthPt, effHeightMm);
-
-        // 1) Dibujo barras
-        doc.image(png, x0, y0, { width: widthPt, height: barcodeHpt });
-
-        // 2) Dibujo texto humano con el gap
-        if (showText) {
-          const yText = y0 + barcodeHpt + gapPt; // ← SEPARACIÓN AQUÍ
-          drawSkuText(doc, humanText, {
-            x: x0,
-            y: yText,
+        if (symb === 'qrcode') {
+          // ---- 2D: QR cuadrado aprovechando el alto (≈15mm)
+          const sidePt = Math.min(widthPt, heightPt);
+          const png = await getBarcode(
+            barcodeValue,
             widthPt,
-            mode: String(text_mode || 'middle'),
-            fontPt: Number(font_pt),
-            minPt: Number(min_font_pt || 3.5),
-            lines: Number(text_lines || (text_mode === 'wrap' ? 2 : 1)),
-            maxHeightPt: text_mode === 'full' ? textMaxHpt : undefined
+            0,
+            'qrcode',
+            sidePt
+          );
+          doc.image(png, x0 + (widthPt - sidePt) / 2, y0, {
+            width: sidePt,
+            height: sidePt
           });
+
+          if (showSkuText) {
+            const yText = y0 + sidePt + gapPt;
+            if (yText < y0 + heightPt) {
+              drawSkuText(doc, humanText, {
+                x: x0,
+                y: yText,
+                widthPt,
+                mode: String(text_mode || 'middle'),
+                fontPt: fontPtNum,
+                minPt: Number(min_font_pt || 3.5),
+                lines: textLines
+              });
+            }
+          }
+        } else {
+          // ---- 1D: Code128 robusto
+          let barcodeHpt, textMaxHpt;
+          const showTextBlock = showSkuText && humanText;
+          if (showTextBlock && text_mode === 'full') {
+            barcodeHpt = mmToPt(Number(min_barcode_mm));
+            barcodeHpt = Math.min(barcodeHpt, heightPt - 1);
+            textMaxHpt = Math.max(0, heightPt - barcodeHpt - gapPt);
+          } else {
+            const textH = showTextBlock
+              ? text_mode === 'wrap'
+                ? textLines * (fontPtNum + 1)
+                : fontPtNum + 2
+              : 0;
+            textMaxHpt = textH + (showTextBlock ? gapPt : 0);
+            barcodeHpt = Math.max(1, heightPt - textMaxHpt);
+          }
+
+          const effHeightMm = height_mm
+            ? Number(height_mm)
+            : Math.max(10, Math.round(ptToMm(barcodeHpt))); // mínimo 10mm
+
+          const png = await getBarcode(
+            barcodeValue,
+            widthPt,
+            effHeightMm,
+            'code128',
+            0
+          );
+          doc.image(png, x0, y0, { width: widthPt, height: barcodeHpt });
+
+          if (showTextBlock) {
+            const yText = y0 + barcodeHpt + gapPt;
+            drawSkuText(doc, humanText, {
+              x: x0,
+              y: yText,
+              widthPt,
+              mode: String(text_mode || 'middle'),
+              fontPt: fontPtNum,
+              minPt: Number(min_font_pt || 3.5),
+              lines: textLines,
+              maxHeightPt: text_mode === 'full' ? textMaxHpt : undefined
+            });
+          }
         }
       }
     }
