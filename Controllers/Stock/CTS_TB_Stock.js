@@ -79,7 +79,6 @@ async function ensureUniqueSku(
   }
 }
 
-
 // Obtener todos los registros de stock con sus relaciones
 export const OBRS_Stock_CTS = async (req, res) => {
   try {
