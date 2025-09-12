@@ -88,18 +88,30 @@ export const ER_Usuario_CTS = async (req, res) => {
 // Actualizar un usuario
 export const UR_Usuario_CTS = async (req, res) => {
   const { id } = req.params;
+  const { password, ...rest } = req.body;
 
   try {
-    const [updated] = await UserModel.update(req.body, {
-      where: { id }
+    // Buscar el usuario
+    const usuario = await UserModel.findByPk(id);
+    if (!usuario) {
+      return res.status(404).json({ mensajeError: 'Usuario no encontrado' });
+    }
+
+    // Si viene password y no está vacío → hashear
+    if (password && password.trim() !== '') {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      rest.password = hashedPassword;
+    }
+
+    // Actualizar usuario
+    await usuario.update(rest);
+
+    // Traer con relación de local para mostrar actualizado
+    const actualizado = await UserModel.findByPk(id, {
+      include: [{ model: LocalesModel }]
     });
 
-    if (updated === 1) {
-      const actualizado = await UserModel.findByPk(id);
-      res.json({ message: 'Usuario actualizado correctamente', actualizado });
-    } else {
-      res.status(404).json({ mensajeError: 'Usuario no encontrado' });
-    }
+    res.json({ message: 'Usuario actualizado correctamente', actualizado });
   } catch (error) {
     res.status(500).json({ mensajeError: error.message });
   }
