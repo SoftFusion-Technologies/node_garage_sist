@@ -88,7 +88,8 @@ import {
   DISTRIBUIR_Stock_CTS,
   TRANSFERIR_Stock_CTS,
   ER_StockPorGrupo,
-  DUPLICAR_Producto_CTS
+  DUPLICAR_Producto_CTS,
+  listarTallesPorProducto
 } from '../Controllers/Stock/CTS_TB_Stock.js';
 
 // Importar controladores de usuarios
@@ -152,6 +153,8 @@ router.post(
   '/productos/:id/duplicar',
   /*authMiddleware,*/ DUPLICAR_Producto_CTS
 );
+router.get('/stock/talles', listarTallesPorProducto);
+
 
 // Obtener todos los productos
 router.get('/productos', OBRS_Productos_CTS);

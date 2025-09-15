@@ -59,7 +59,17 @@ export const StockModel = db.define(
   {
     timestamps: true,
     createdAt: 'created_at',
-    updatedAt: 'updated_at'
+    updatedAt: 'updated_at',
+    indexes: [
+      { fields: ['producto_id'] },
+      { fields: ['talle_id'] },
+      { fields: ['local_id'] },
+      { fields: ['lugar_id'] },
+      { fields: ['estado_id'] },
+      { fields: ['codigo_sku'] },
+      { fields: ['updated_at'] },
+      { fields: ['cantidad'] }
+    ]
   }
 );
 

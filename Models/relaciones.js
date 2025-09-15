@@ -222,6 +222,14 @@ ComboVentaLogModel.belongsTo(CombosModel, {
   as: 'combo'
 });
 
+// 👉 asociación clave para el error:
+ComboProductosPermitidosModel.belongsTo(TallesModel,    { as: 'talle',    foreignKey: 'talle_id' });
+
+// (opcional)
+TallesModel.hasMany(ComboProductosPermitidosModel, { as: 'combo_permitidos', foreignKey: 'talle_id' });
+
+// RELACIONES MODULO DE COMBOS - FIN
+
 VentasModel.hasMany(ComboVentaLogModel, {
   foreignKey: 'venta_id',
   as: 'combos_vendidos'

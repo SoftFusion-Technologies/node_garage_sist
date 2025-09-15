@@ -959,3 +959,58 @@ export const DUPLICAR_Producto_CTS = async (req, res) => {
     return res.status(500).json({ mensajeError: err.message });
   }
 };
+
+export const listarTallesPorProducto = async (req, res) => {
+  try {
+    const producto_id = parseInt(req.query.producto_id, 10);
+    const local_id = req.query.local_id
+      ? parseInt(req.query.local_id, 10)
+      : null;
+
+    if (!producto_id) {
+      return res.status(400).json({ error: 'producto_id requerido' });
+    }
+
+    const where = { producto_id };
+    if (local_id) where.local_id = local_id;
+
+    // Traemos el stock por talle
+    const items = await StockModel.findAll({
+      where,
+      include: [
+        { model: TallesModel, as: 'talle', attributes: ['id', 'nombre'] }
+      ],
+      attributes: ['id', 'cantidad', 'codigo_sku'],
+      order: [[{ model: TallesModel, as: 'talle' }, 'nombre', 'ASC']]
+    });
+
+    // Agrupar por talle_id (por si hay múltiples filas por talle)
+    const map = new Map();
+    for (const it of items) {
+      const tid = it.talle?.id ?? null;
+      const key = tid ?? 'null';
+      if (!map.has(key)) {
+        map.set(key, {
+          talle_id: tid,
+          talle_nombre: it.talle?.nombre ?? 'Sin talle',
+          cantidad: 0,
+          // el último stock_id/codigo_sku es solo informativo
+          stock_id: it.id,
+          codigo_sku: it.codigo_sku
+        });
+      }
+      const row = map.get(key);
+      row.cantidad += Number(it.cantidad ?? 0);
+      // podés decidir cuál stock_id/codigo_sku conservar; acá dejo el último
+      row.stock_id = it.id;
+      row.codigo_sku = it.codigo_sku;
+    }
+
+    const resp = Array.from(map.values());
+
+    return res.json(resp);
+  } catch (e) {
+    console.error('listarTallesPorProducto error:', e);
+    return res.status(500).json({ error: 'Error interno' });
+  }
+};

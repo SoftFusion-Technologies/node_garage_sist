@@ -16,18 +16,84 @@ import { CategoriasModel } from '../../Models/Stock/MD_TB_Categorias.js';
 import { StockModel } from '../../Models/Stock/MD_TB_Stock.js';
 import db from '../../DataBase/db.js';
 import axios from 'axios';
+import { Op } from 'sequelize';
 
-// Obtener todos los productos con categoría incluida
 export const OBRS_Productos_CTS = async (req, res) => {
   try {
-    const productos = await ProductosModel.findAll({
-      include: {
-        model: CategoriasModel,
-        as: 'categoria',
-        attributes: ['id', 'nombre']
+    const {
+      page = 1,
+      limit = 9,        // 👈 9 por página
+      pageSize,         // alias
+      offset,           // si viene, PRIORIDAD
+      q = '',           // búsqueda por nombre/desc/categoría
+      estado,           // 'activo' | 'inactivo'
+      categoria_id,     // id numérico
+      precio_min,       // number
+      precio_max,       // number
+      orden = 'nombre'  // 'nombre' | 'precio'
+    } = req.query;
+
+    const size = parseInt(pageSize ?? limit, 10) || 9;
+    const pg   = parseInt(page, 10) || 1;
+    const off  = offset !== undefined ? Math.max(0, parseInt(offset, 10)) : (pg - 1) * size;
+
+    // where básico
+    const where = {};
+    if (estado && ['activo','inactivo'].includes(estado)) where.estado = estado;
+    if (categoria_id) where.categoria_id = parseInt(categoria_id, 10);
+
+    // rango de precio
+    const min = precio_min !== undefined ? Number(precio_min) : undefined;
+    const max = precio_max !== undefined ? Number(precio_max) : undefined;
+    if (Number.isFinite(min) || Number.isFinite(max)) {
+      where.precio = {};
+      if (Number.isFinite(min)) where.precio[Op.gte] = min;
+      if (Number.isFinite(max)) where.precio[Op.lte] = max;
+    }
+
+    // búsqueda (nombre/descripcion/categoría.nombre)
+    const include = [{
+      model: CategoriasModel,
+      as: 'categoria',
+      attributes: ['id','nombre']
+    }];
+
+    if (q && q.trim()) {
+      const like = { [Op.like]: `%${q.trim()}%` };
+      where[Op.or] = [
+        { nombre: like },
+        { descripcion: like }
+      ];
+      // filtrar por nombre de categoría desde include
+      include[0].where = { ...(include[0].where || {}), nombre: like };
+      include[0].required = false; // para que no excluya si no matchea categoría
+    }
+
+    const order = (orden === 'precio')
+      ? [['precio','ASC'], ['nombre','ASC']]
+      : [['nombre','ASC']];
+
+    const { rows, count } = await ProductosModel.findAndCountAll({
+      where,
+      include,
+      order,
+      limit: size,
+      offset: off
+    });
+
+    const totalPages = Math.max(1, Math.ceil(count / size));
+    const currentPage = offset !== undefined ? Math.floor(off / size) + 1 : pg;
+
+    res.json({
+      data: rows,
+      meta: {
+        total: count,
+        page: currentPage,
+        pageSize: size,
+        offset: off,
+        totalPages
       }
     });
-    res.json(productos);
   } catch (error) {
     res.status(500).json({ mensajeError: error.message });
   }
