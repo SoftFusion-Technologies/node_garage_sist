@@ -85,34 +85,181 @@ export const OBRS_Stock_CTS = async (req, res) => {
   try {
     const { locales, producto_id, minQty } = req.query;
 
+    // --- filtros ---
     const where = {};
     if (producto_id) where.producto_id = Number(producto_id);
     if (minQty) where.cantidad = { [Op.gte]: Number(minQty) };
 
+    let localesIds = [];
     if (locales) {
-      const ids = String(locales)
+      localesIds = String(locales)
         .split(',')
         .map((x) => Number(x))
         .filter(Boolean);
-      if (ids.length) where.local_id = { [Op.in]: ids };
+      if (localesIds.length) where.local_id = { [Op.in]: localesIds };
     }
 
-    const stock = await StockModel.findAll({
-      where,
-      include: [
-        { model: ProductosModel },
-        { model: TallesModel },
-        { model: LocalesModel },
-        { model: LugaresModel },
-        { model: EstadosModel }
-      ],
-      order: [
-        ['updated_at', 'DESC'],
-        ['id', 'DESC']
-      ]
-    });
+    // --- includes "lean" ---
+    const include = [
+      { model: ProductosModel, attributes: ['id', 'nombre'] },
+      { model: TallesModel, attributes: ['id', 'nombre'] },
+      { model: LocalesModel, attributes: ['id', 'nombre'] },
+      { model: LugaresModel, attributes: ['id', 'nombre'] },
+      { model: EstadosModel, attributes: ['id', 'nombre'] }
+    ];
 
-    res.json(stock);
+    const order = [
+      ['updated_at', 'DESC'],
+      ['id', 'DESC']
+    ];
+
+    // --- parámetros de control ---
+    const rawLimit = String(req.query.limit ?? '');
+    const grouped = ['1', 'true', 'yes'].includes(
+      String(req.query.grouped).toLowerCase()
+    );
+    const pageNum = Math.max(1, Number(req.query.page) || 1);
+
+    // =========================================================
+    // MODO 1: GROUPED (opcional) -> agrupa y pagina en DB
+    // =========================================================
+    if (grouped) {
+      const perPage = Math.max(1, Math.min(200, Number(req.query.limit) || 12));
+      const ofs = (pageNum - 1) * perPage;
+
+      // WHERE SQL (mismos filtros que el ORM)
+      const whereParts = [];
+      const repl = {};
+      if (producto_id) {
+        whereParts.push(`producto_id = :producto_id`);
+        repl.producto_id = Number(producto_id);
+      }
+      if (minQty) {
+        whereParts.push(`cantidad >= :minQty`);
+        repl.minQty = Number(minQty);
+      }
+      if (localesIds.length) {
+        whereParts.push(`local_id IN (:locales)`);
+        repl.locales = localesIds;
+      }
+      const whereSQL = whereParts.length
+        ? `WHERE ${whereParts.join(' AND ')}`
+        : '';
+
+      // total de grupos
+      const countSql = `
+        SELECT COUNT(*) AS total
+        FROM (
+          SELECT 1
+          FROM stock
+          ${whereSQL}
+          GROUP BY producto_id, local_id, lugar_id, estado_id, en_perchero
+        ) g
+      `;
+      const [{ total }] = await db.query(countSql, {
+        type: QueryTypes.SELECT,
+        replacements: repl
+      });
+
+      // página de grupos (ordenada por "recientes")
+      const pageSql = `
+        SELECT
+          producto_id,
+          local_id,
+          lugar_id,
+          estado_id,
+          en_perchero,
+          SUM(cantidad)   AS total_qty,
+          MAX(updated_at) AS last_updated,
+          MAX(id)         AS last_id
+        FROM stock
+        ${whereSQL}
+        GROUP BY producto_id, local_id, lugar_id, estado_id, en_perchero
+        ORDER BY last_updated DESC, last_id DESC
+        LIMIT :limit OFFSET :offset
+      `;
+      const data = await db.query(pageSql, {
+        type: QueryTypes.SELECT,
+        replacements: { ...repl, limit: perPage, offset: ofs }
+      });
+
+      return res.json({
+        data, // grupos (no filas)
+        meta: {
+          total, // total de GRUPOS
+          page: pageNum,
+          limit: perPage,
+          offset: ofs,
+          totalPages: Math.max(1, Math.ceil(total / perPage)),
+          hasPrev: pageNum > 1,
+          hasNext: pageNum * perPage < total
+        }
+      });
+    }
+
+    // =========================================================
+    // MODO 2: ROWS (default) -> filas con includes
+    //         Soporta limit=all para que el front agrupe todo
+    // =========================================================
+
+    // COUNT separado (sin include)
+    const totalRows = await StockModel.count({ where });
+
+    // limit/offset
+    let perPage, ofs;
+    if (rawLimit.toLowerCase() === 'all') {
+      perPage = totalRows || 1; // evita 0 en LIMIT (no aplica si usamos findAll sin limit)
+      ofs = 0;
+    } else {
+      perPage = Math.max(1, Math.min(1000, Number(rawLimit) || 200)); // 200 para tu fetchAll actual
+      ofs = (pageNum - 1) * perPage;
+    }
+
+    // SELECT
+    const findOptions = {
+      where,
+      include,
+      order,
+      subQuery: false,
+      attributes: [
+        'id',
+        'producto_id',
+        'talle_id',
+        'local_id',
+        'lugar_id',
+        'estado_id',
+        'cantidad',
+        'en_perchero',
+        'codigo_sku',
+        'updated_at'
+      ]
+    };
+
+    if (rawLimit.toLowerCase() !== 'all') {
+      findOptions.limit = perPage;
+      findOptions.offset = ofs;
+    }
+    // si es "all": sin limit/offset -> trae todo (con includes lean)
+
+    const rows = await StockModel.findAll(findOptions);
+
+    const totalPages =
+      rawLimit.toLowerCase() === 'all'
+        ? 1
+        : Math.max(1, Math.ceil(totalRows / perPage));
+
+    return res.json({
+      data: rows,
+      meta: {
+        total: totalRows, // total de FILAS (consistente con modo legacy)
+        page: rawLimit.toLowerCase() === 'all' ? 1 : pageNum,
+        limit: rawLimit.toLowerCase() === 'all' ? rows.length : perPage,
+        offset: rawLimit.toLowerCase() === 'all' ? 0 : ofs,
+        totalPages,
+        hasPrev: rawLimit.toLowerCase() !== 'all' && pageNum > 1,
+        hasNext: rawLimit.toLowerCase() !== 'all' && pageNum < totalPages
+      }
+    });
   } catch (error) {
     res.status(500).json({ mensajeError: error.message });
   }
