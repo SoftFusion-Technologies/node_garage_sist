@@ -111,8 +111,13 @@ import {
   UR_Cliente_CTS,
   SEARCH_Clientes_CTS,
   OBR_HistorialComprasCliente_CTS,
-  OBRS_ClientesInactivos_CTS
+  OBRS_ClientesInactivos_CTS,
+  // NUEVOS:
+  PUT_Cliente_OptIn_CTS,
+  PUT_Cliente_OptOut_CTS,
+  OBRS_ClientesElegiblesWA_CTS
 } from '../Controllers/CTS_TB_Clientes.js';
+
 // Importar controladores de categorias
 import {
   OBRS_Categorias_CTS,
@@ -154,7 +159,6 @@ router.post(
   /*authMiddleware,*/ DUPLICAR_Producto_CTS
 );
 router.get('/stock/talles', listarTallesPorProducto);
-
 
 // Obtener todos los productos
 router.get('/productos', OBRS_Productos_CTS);
@@ -241,15 +245,20 @@ router.put('/usuarios/:id', UR_Usuario_CTS);
 // Rutas para operaciones CRUD en la tabla 'clientes'
 // ----------------------------------------------------------------
 
-router.get('/clientes/search', SEARCH_Clientes_CTS); // PRIMERO
+// Orden sensible: /clientes/search antes que /clientes/:id
+router.get('/clientes/search', SEARCH_Clientes_CTS);
 router.get('/clientes', OBRS_Clientes_CTS);
-router.get('/clientes/:id', OBR_Cliente_CTS); // DESPUÉS
+router.get('/clientes/:id', OBR_Cliente_CTS);
 router.post('/clientes', CR_Cliente_CTS);
 router.delete('/clientes/:id', ER_Cliente_CTS);
 router.put('/clientes/:id', UR_Cliente_CTS);
 router.get('/clientes/:id/ventas', OBR_HistorialComprasCliente_CTS);
 router.get('/clientes-inactivos', OBRS_ClientesInactivos_CTS);
 
+// NUEVOS clientes (WA):
+router.put('/clientes/:id/opt-in', PUT_Cliente_OptIn_CTS);
+router.put('/clientes/:id/opt-out', PUT_Cliente_OptOut_CTS);
+router.get('/clientes-elegibles-wa', OBRS_ClientesElegiblesWA_CTS);
 // ----------------------------------------------------------------
 // Rutas para operaciones CRUD en la tabla 'categorias'
 // ----------------------------------------------------------------
@@ -488,14 +497,28 @@ import {
   OBR_RecaptacionCampana_CTS,
   CR_RecaptacionCampana_CTS,
   UR_RecaptacionCampana_CTS,
-  ER_RecaptacionCampana_CTS
+  ER_RecaptacionCampana_CTS,
+  // NUEVOS:
+  POST_RecaptacionCampana_Queue_CTS,
+  POST_RecaptacionCampana_Pause_CTS,
+  POST_RecaptacionCampana_Resume_CTS,
+  OBR_RecaptacionCampana_Estado_CTS,
+  POST_RecaptacionCampana_LogSend_CTS
 } from '../Controllers/Recaptacion/CTS_TB_RecaptacionCampanas.js';
 
 import {
   OBRS_RecaptacionClientes_CTS,
+  OBR_RecaptacionCliente_CTS,
   CR_RecaptacionCliente_CTS,
   UR_RespuestaRecaptacion_CTS,
-  ER_RecaptacionCliente_CTS
+  ER_RecaptacionCliente_CTS,
+  // NUEVOS:
+  UR_StatusRecaptacion_CTS,
+  POST_RecaptacionClientes_Retry_CTS,
+  PUT_RecaptacionCliente_ByMessageId_CTS,
+  OBR_RecaptacionClientes_Metrics_CTS,
+  POST_RecaptacionClientes_LogSend_CTS,
+  PUT_RecaptacionCliente_TrackByCampanaCliente_CTS
 } from '../Controllers/Recaptacion/CTS_TB_RecaptacionClientes.js';
 
 // -------------------------
@@ -507,14 +530,68 @@ router.post('/recaptacion-campanas', CR_RecaptacionCampana_CTS);
 router.put('/recaptacion-campanas/:id', UR_RecaptacionCampana_CTS);
 router.delete('/recaptacion-campanas/:id', ER_RecaptacionCampana_CTS);
 
+// NUEVOS campañas (acciones de envío):
+router.post(
+  '/recaptacion-campanas/:id/queue',
+  POST_RecaptacionCampana_Queue_CTS
+);
+router.post(
+  '/recaptacion-campanas/:id/pause',
+  POST_RecaptacionCampana_Pause_CTS
+);
+router.post(
+  '/recaptacion-campanas/:id/resume',
+  POST_RecaptacionCampana_Resume_CTS
+);
+router.get(
+  '/recaptacion-campanas/:id/estado',
+  OBR_RecaptacionCampana_Estado_CTS
+);
+
+router.post(
+  '/recaptacion-campanas/:id/log-send',
+  POST_RecaptacionCampana_LogSend_CTS
+);
+
 // -------------------------
 // RUTAS: CLIENTES ASIGNADOS A CAMPAÑAS
 // -------------------------
 router.get('/recaptacion-clientes', OBRS_RecaptacionClientes_CTS);
+router.get('/recaptacion-clientes/:id', OBR_RecaptacionCliente_CTS);
 router.post('/recaptacion-clientes', CR_RecaptacionCliente_CTS);
-router.put('/recaptacion-clientes/:id', UR_RespuestaRecaptacion_CTS);
-router.delete('/recaptacion-clientes/:id', ER_RecaptacionCliente_CTS);
 
+// Actualizar respuesta → URL dedicada
+router.put('/recaptacion-clientes/:id/respuesta', UR_RespuestaRecaptacion_CTS);
+
+// NUEVO: actualizar status manualmente
+router.put('/recaptacion-clientes/:id/status', UR_StatusRecaptacion_CTS);
+
+// NUEVO: reintentar fallidos / re-encolar
+router.post('/recaptacion-clientes/retry', POST_RecaptacionClientes_Retry_CTS);
+
+// NUEVO: actualizar por message_id (para webhook)
+router.put(
+  '/recaptacion-clientes/by-message',
+  PUT_RecaptacionCliente_ByMessageId_CTS
+);
+
+// Métricas rápidas por campaña
+router.get(
+  '/recaptacion-clientes/metrics',
+  OBR_RecaptacionClientes_Metrics_CTS
+);
+
+router.post(
+  '/recaptacion-campanas/:campana_id/log-send',
+  POST_RecaptacionClientes_LogSend_CTS
+);
+router.put(
+  '/recaptacion-clientes/track',
+  PUT_RecaptacionCliente_TrackByCampanaCliente_CTS
+);
+
+// Eliminar asignación
+router.delete('/recaptacion-clientes/:id', ER_RecaptacionCliente_CTS);
 import { OBRS_EstadisticasRecaptacion_CTS } from '../Controllers/Analiticas/EstadisticasRecaptacion.js';
 router.get('/recaptacion-estadisticas', OBRS_EstadisticasRecaptacion_CTS);
 

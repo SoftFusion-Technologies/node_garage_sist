@@ -1,10 +1,10 @@
 /*
  * Programador: Benjamin Orellana
  * Fecha Creación: 01 / 07 / 2025
- * Versión: 1.0
+ * Versión: 1.1
  *
  * Descripción:
- * Este archivo (MD_TB_Clientes.js) contiene la definición del modelo Sequelize para la tabla de clientes.
+ * Modelo Sequelize para la tabla 'clientes' con campos para campañas WhatsApp.
  *
  * Tema: Modelos - Clientes
  * Capa: Backend
@@ -31,10 +31,19 @@ export const ClienteModel = db.define(
       type: DataTypes.STRING(30),
       allowNull: true
     },
+    // NUEVO: teléfono normalizado E.164 (+549...)
+    telefono_e164: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: 'Número en formato E.164. Ej: +5493815796507'
+    },
     email: {
       type: DataTypes.STRING(100),
       allowNull: true,
-      unique: true
+      unique: true,
+      validate: {
+        isEmail: true
+      }
     },
     direccion: {
       type: DataTypes.STRING(255),
@@ -42,6 +51,25 @@ export const ClienteModel = db.define(
     },
     dni: {
       type: DataTypes.STRING(20),
+      allowNull: true
+    },
+    // NUEVO: opt-in / opt-out / bloqueado
+    wa_opt_in: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
+    wa_opt_out_at: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    wa_blocked: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
+    origen_opt_in: {
+      type: DataTypes.ENUM('manual', 'web', 'qr', 'compra', 'import'),
       allowNull: true
     },
     fecha_alta: {
@@ -55,9 +83,20 @@ export const ClienteModel = db.define(
     }
   },
   {
+    tableName: 'clientes',
     timestamps: false,
-    createdAt: 'fecha_alta',
-    updatedAt: false // Si querés manejar updatedAt, ponelo en true y configurá el nombre de campo.
+    // Nota: timestamps=false => Sequelize no maneja createdAt/updatedAt automáticamente.
+    indexes: [
+      { name: 'idx_clientes_tel_e164', fields: ['telefono_e164'] },
+      { name: 'idx_clientes_wa_optin', fields: ['wa_opt_in'] }
+    ],
+    defaultScope: {
+      // Evita traer emails enormes o datos innecesarios si luego querés ajustar
+    },
+    scopes: {
+      conOptIn: { where: { wa_opt_in: true } },
+      conE164: { where: { telefono_e164: { [db.Sequelize.Op.ne]: null } } }
+    }
   }
 );
 
