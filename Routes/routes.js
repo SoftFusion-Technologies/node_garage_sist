@@ -104,6 +104,7 @@ import {
 
 // Importar controladores de clientes
 import {
+  OBRS_Clientes_V2,
   OBRS_Clientes_CTS,
   OBR_Cliente_CTS,
   CR_Cliente_CTS,
@@ -246,6 +247,7 @@ router.put('/usuarios/:id', UR_Usuario_CTS);
 // ----------------------------------------------------------------
 
 // Orden sensible: /clientes/search antes que /clientes/:id
+router.get('/clientes/v2', OBRS_Clientes_V2);
 router.get('/clientes/search', SEARCH_Clientes_CTS);
 router.get('/clientes', OBRS_Clientes_CTS);
 router.get('/clientes/:id', OBR_Cliente_CTS);

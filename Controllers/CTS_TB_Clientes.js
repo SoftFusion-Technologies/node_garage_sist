@@ -66,6 +66,106 @@ function toE164ARMobile(raw) {
   return '+' + msisdn;
 }
 
+
+export const OBRS_Clientes_V2 = async (req, res) => {
+  try {
+    // 1) Parámetros y defaults seguros
+    const {
+      q = '',
+      optin,
+      cone164,
+      // pagina actual (0-based) y tamaño de página. También aceptamos limit/offset crudos.
+      page,
+      pageSize,
+      limit: limitRaw,
+      offset: offsetRaw,
+      sort = 'id',
+      order = 'DESC'
+    } = req.query;
+
+    // Cap y normalización
+    const MAX_LIMIT = 100;
+    const defaultLimit = 20;
+
+    // Si vino page/pageSize, calculamos offset/limit desde ahí; si no, usamos limit/offset
+    const limit = Math.min(
+      Number(pageSize ?? limitRaw ?? defaultLimit) || defaultLimit,
+      MAX_LIMIT
+    );
+    const offset =
+      Number((page != null ? Number(page) * limit : offsetRaw) ?? 0) || 0;
+
+    // 2) Filtro base
+    const where = {};
+    if (optin === '1') where.wa_opt_in = true;
+    if (cone164 === '1') where.telefono_e164 = { [Op.ne]: null };
+
+    const qTrim = q.trim();
+    if (qTrim.length >= 2) {
+      const isNumeric = /^\d+$/.test(qTrim);
+      if (isNumeric) {
+        where[Op.or] = [
+          { dni: qTrim },
+          { telefono: { [Op.like]: `%${qTrim}%` } },
+          { telefono_e164: { [Op.like]: `%${qTrim}%` } }
+        ];
+      } else {
+        where[Op.or] = [
+          { nombre: { [Op.like]: `%${qTrim}%` } },
+          { email: { [Op.like]: `%${qTrim}%` } }
+        ];
+      }
+    }
+
+    // 3) Orden seguro (whitelist)
+    const ORDER_WHITELIST = new Set([
+      'id',
+      'nombre',
+      'fecha_alta',
+      'fecha_ultima_compra'
+    ]);
+    const SORT = ORDER_WHITELIST.has(sort) ? sort : 'id';
+    const ORDER = String(order).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    // 4) Proyección ligera (evita payload gigante si luego agregás campos pesados)
+    const attributes = [
+      'id',
+      'nombre',
+      'telefono',
+      'telefono_e164',
+      'email',
+      'dni',
+      'direccion',
+      'wa_opt_in',
+      'wa_blocked',
+      'fecha_alta',
+      'fecha_ultima_compra'
+    ];
+
+    // 5) Consulta paginada + total
+    const { rows, count } = await ClienteModel.findAndCountAll({
+      where,
+      attributes,
+      order: [[SORT, ORDER]],
+      limit,
+      offset
+    });
+
+    // 6) Respuesta estándar de paginación
+    const hasMore = offset + limit < count;
+    res.json({
+      data: rows,
+      page: {
+        limit,
+        offset,
+        total: count,
+        hasMore
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ mensajeError: error.message });
+  }
+};
 /* =========================
    Obtener todos los clientes
    ========================= */
