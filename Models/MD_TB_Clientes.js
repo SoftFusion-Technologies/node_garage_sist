@@ -53,6 +53,14 @@ export const ClienteModel = db.define(
       type: DataTypes.STRING(20),
       allowNull: true
     },
+    // NUEVO: cliente online / canal e-commerce
+    es_online: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: 'true si es cliente online/ecommerce'
+    },
+    
     // NUEVO: opt-in / opt-out / bloqueado
     wa_opt_in: {
       type: DataTypes.BOOLEAN,

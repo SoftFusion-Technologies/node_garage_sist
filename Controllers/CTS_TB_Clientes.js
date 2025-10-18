@@ -66,7 +66,6 @@ function toE164ARMobile(raw) {
   return '+' + msisdn;
 }
 
-
 export const OBRS_Clientes_V2 = async (req, res) => {
   try {
     // 1) Parámetros y defaults seguros
@@ -80,8 +79,11 @@ export const OBRS_Clientes_V2 = async (req, res) => {
       limit: limitRaw,
       offset: offsetRaw,
       sort = 'id',
-      order = 'DESC'
+      order = 'DESC',
+      online
     } = req.query;
+    if (online === '1') where.es_online = true;
+    if (online === '0') where.es_online = false;
 
     // Cap y normalización
     const MAX_LIMIT = 100;
@@ -134,8 +136,9 @@ export const OBRS_Clientes_V2 = async (req, res) => {
       'telefono',
       'telefono_e164',
       'email',
-      'dni',
       'direccion',
+      'dni',
+      'es_online', // <— NUEVO en la proyección
       'wa_opt_in',
       'wa_blocked',
       'fecha_alta',
@@ -223,6 +226,7 @@ export const OBR_Cliente_CTS = async (req, res) => {
 /* =========================
    Crear un nuevo cliente
    ========================= */
+// controllers/clientes.cr.js
 export const CR_Cliente_CTS = async (req, res) => {
   const {
     nombre,
@@ -230,36 +234,83 @@ export const CR_Cliente_CTS = async (req, res) => {
     email,
     direccion,
     dni,
-    // nuevos campos opcionales
     wa_opt_in,
     wa_blocked,
-    origen_opt_in
+    origen_opt_in,
+    es_online
   } = req.body;
 
   if (!nombre) {
-    return res.status(400).json({
-      mensajeError: 'Falta el campo obligatorio: nombre'
-    });
+    return res
+      .status(400)
+      .json({ mensajeError: 'Falta el campo obligatorio: nombre' });
   }
 
   try {
-    const telefono_e164 = toE164ARMobile(telefono);
+    const telefono_e164 = telefono ? toE164ARMobile(telefono) : null;
 
+    // Cast robusto
+    const esOnline =
+      es_online === true ||
+      es_online === 'true' ||
+      es_online === 1 ||
+      es_online === '1';
+
+    const dniNorm = (dni ?? '').toString().trim() || null;
+    const emailNorm = (email ?? '').toString().trim().toLowerCase() || null;
+
+    // DUPLICADOS (sin exponer datos)
+    if (dniNorm) {
+      const dup = await ClienteModel.findOne({ where: { dni: dniNorm } });
+      if (dup)
+        return res.status(409).json({
+          code: 'DUPLICATE',
+          field: 'dni',
+          mensajeError: 'Ya existe un registro con esos datos.'
+        });
+    }
+    if (telefono_e164) {
+      const dup = await ClienteModel.findOne({ where: { telefono_e164 } });
+      if (dup)
+        return res.status(409).json({
+          code: 'DUPLICATE',
+          field: 'telefono',
+          mensajeError: 'Ya existe un registro con esos datos.'
+        });
+    }
+    if (emailNorm) {
+      const dup = await ClienteModel.findOne({ where: { email: emailNorm } });
+      if (dup)
+        return res.status(409).json({
+          code: 'DUPLICATE',
+          field: 'email',
+          mensajeError: 'Ya existe un registro con esos datos.'
+        });
+    }
+
+    // Crear
     const nuevo = await ClienteModel.create({
       nombre,
       telefono: telefono || null,
       telefono_e164,
-      email: email || null,
+      email: emailNorm,
       direccion: direccion || null,
-      dni: dni || null,
+      dni: dniNorm,
+      es_online: esOnline,
       wa_opt_in: typeof wa_opt_in === 'boolean' ? wa_opt_in : true,
       wa_blocked: !!wa_blocked,
       origen_opt_in: origen_opt_in || 'manual'
-      // fecha_alta: default DB y modelo
     });
 
     res.json({ message: 'Cliente creado correctamente', cliente: nuevo });
   } catch (error) {
+    if (error?.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({
+        code: 'DUPLICATE',
+        field: 'unique_constraint',
+        mensajeError: 'Ya existe un registro con esos datos.'
+      });
+    }
     res.status(500).json({ mensajeError: error.message });
   }
 };
