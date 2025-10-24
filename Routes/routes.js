@@ -657,4 +657,20 @@ router.get('/combo-venta-log', OBRS_ComboVentaLog_CTS);
 router.get('/combo-venta-log/:venta_id', OBRS_CombosPorVenta_CTS);
 router.post('/combo-venta-log', CR_ComboVentaLog_CTS);
 router.delete('/combo-venta-log/:id', ER_ComboVentaLog_CTS);
+
+
+import {
+  getResumenCaja,
+  getResumenPorDia,
+  getVentasDetalle
+} from '../Controllers/Analiticas/ResumenCajaController.js';
+
+
+router.get('/resumen-caja', getResumenCaja);          // por caja o rango de fechas
+router.get('/resumen-caja/por-dia', getResumenPorDia); // agregado por día
+router.get('/resumen-caja/ventas', getVentasDetalle);  // detalle de ventas (paginado)
+
+import { getVentasDesbalanceadas } from '../Controllers/Analiticas/AuditoriaController.js';
+router.get('/auditoria/ventas-desbalanceadas', getVentasDesbalanceadas);
+
 export default router;
