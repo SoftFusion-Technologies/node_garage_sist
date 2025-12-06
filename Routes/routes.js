@@ -365,6 +365,24 @@ router.post('/venta_medios_pago', CR_VentaMediosPago_CTS); // Crear nuevo
 router.delete('/venta_medios_pago/:id', ER_VentaMediosPago_CTS); // Eliminar por ID
 router.put('/venta_medios_pago/:id', UR_VentaMediosPago_CTS); // Actualizar por ID
 
+// Controladores de Caja / Recaudaciones
+import {
+  CR_CajaRecaudacion_CTS,
+  OBRS_CajaRecaudaciones_CTS,
+  OBR_CajaRecaudacion_CTS,
+  ER_CajaRecaudacion_CTS
+} from '../Controllers/Ventas/CTS_TB_CajaRecaudaciones.js';
+
+// ----------------------------------------------------------------
+// Rutas para módulo de Recaudaciones de Caja
+// ----------------------------------------------------------------
+
+router.post('/caja/recaudaciones', CR_CajaRecaudacion_CTS); // Registrar recaudación
+router.get('/caja/recaudaciones', OBRS_CajaRecaudaciones_CTS); // Listado global
+router.get('/caja/recaudaciones/:id', OBR_CajaRecaudacion_CTS); // Detalle por ID
+router.delete('/caja/recaudaciones/:id', ER_CajaRecaudacion_CTS); // Eliminar recaudación
+
+
 // Importar controladores de caja
 import {
   OBRS_Caja_CTS,
