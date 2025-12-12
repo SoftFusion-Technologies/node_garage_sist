@@ -304,6 +304,29 @@ router.post('/medios-pago', CR_MedioPago_CTS);
 router.delete('/medios-pago/:id', ER_MedioPago_CTS);
 router.put('/medios-pago/:id', UR_MedioPago_CTS);
 
+import {
+  OBRS_MediosPagoComponentes_CTS,
+  OBRS_ComponentesByCompuesto_CTS,
+  OBR_MedioPagoComponente_CTS,
+  CR_MedioPagoComponente_CTS,
+  ER_MedioPagoComponente_CTS,
+  UR_MedioPagoComponente_CTS,
+  UR_ComponentesBulkByCompuesto_CTS
+} from '../Controllers/Ventas/CTS_TB_MediosPagoComponentes.js';
+
+// CRUD tabla medios_pago_componentes (admin/diagnóstico)
+router.get('/medios-pago-componentes', OBRS_MediosPagoComponentes_CTS);
+router.get('/medios-pago-componentes/:id', OBR_MedioPagoComponente_CTS);
+router.post('/medios-pago-componentes', CR_MedioPagoComponente_CTS);
+router.put('/medios-pago-componentes/:id', UR_MedioPagoComponente_CTS);
+router.delete('/medios-pago-componentes/:id', ER_MedioPagoComponente_CTS);
+
+// Componentes por medio compuesto (lo que va a usar el front)
+router.get('/medios-pago/:id/componentes', OBRS_ComponentesByCompuesto_CTS);
+
+// (Opcional recomendado) Reemplazo masivo desde el modal del front
+router.put('/medios-pago/:id/componentes', UR_ComponentesBulkByCompuesto_CTS);
+
 // Importar controladores de ventas
 import {
   OBRS_Ventas_CTS,

@@ -26,6 +26,7 @@ import { ClienteModel } from './MD_TB_Clientes.js';
 import { DetalleVentaModel } from './Ventas/MD_TB_DetalleVenta.js';
 import { VentaMediosPagoModel } from './Ventas/MD_TB_VentaMediosPago.js';
 import { MediosPagoModel } from './Ventas/MD_TB_MediosPago.js';
+import { MediosPagoComponentesModel } from './Ventas/MD_TB_MediosPagoComponentes.js';
 import { CajaModel } from './Ventas/MD_TB_Caja.js';
 import { MovimientosCajaModel } from './Ventas/MD_TB_MovimientosCaja.js';
 import { VentaDescuentosModel } from './Ventas/MD_TB_VentaDescuentos.js';
@@ -98,7 +99,27 @@ VentaMediosPagoModel.belongsTo(VentasModel, { foreignKey: 'venta_id' });
 VentaMediosPagoModel.belongsTo(MediosPagoModel, {
   foreignKey: 'medio_pago_id'
 });
+// ============================
+// Medios de Pago Compuestos
+// ============================
 
+// Un medio de pago COMPUESTO tiene muchas filas en medios_pago_componentes
+MediosPagoModel.hasMany(MediosPagoComponentesModel, {
+  foreignKey: 'medio_pago_compuesto_id',
+  as: 'componentes'
+});
+
+// Cada fila pertenece al "medio compuesto" (cabecera)
+MediosPagoComponentesModel.belongsTo(MediosPagoModel, {
+  foreignKey: 'medio_pago_compuesto_id',
+  as: 'compuesto'
+});
+
+// Cada fila apunta al medio SIMPLE que actúa como componente (para traer nombre/icono/ajuste)
+MediosPagoComponentesModel.belongsTo(MediosPagoModel, {
+  foreignKey: 'medio_pago_id',
+  as: 'medio'
+});
 // (Opcional) Relaciones en relaciones.js:
 CajaModel.belongsTo(LocalesModel, { foreignKey: 'local_id' });
 CajaModel.belongsTo(UserModel, { foreignKey: 'usuario_id' });
@@ -118,13 +139,21 @@ VentasModel.hasMany(VentaDescuentosModel, {
 
 // Relaciones de devoluciones
 DevolucionesModel.belongsTo(VentasModel, { foreignKey: 'venta_id' });
-VentasModel.hasMany(DevolucionesModel, { foreignKey: 'venta_id', as: 'devoluciones' });
+VentasModel.hasMany(DevolucionesModel, {
+  foreignKey: 'venta_id',
+  as: 'devoluciones'
+});
 
 DevolucionesModel.belongsTo(UserModel, { foreignKey: 'usuario_id' });
 UserModel.hasMany(DevolucionesModel, { foreignKey: 'usuario_id' });
 
-DetalleDevolucionModel.belongsTo(DevolucionesModel, { foreignKey: 'devolucion_id' });
-DevolucionesModel.hasMany(DetalleDevolucionModel, { foreignKey: 'devolucion_id', as: 'detalles' });
+DetalleDevolucionModel.belongsTo(DevolucionesModel, {
+  foreignKey: 'devolucion_id'
+});
+DevolucionesModel.hasMany(DetalleDevolucionModel, {
+  foreignKey: 'devolucion_id',
+  as: 'detalles'
+});
 
 DetalleDevolucionModel.belongsTo(StockModel, { foreignKey: 'stock_id' });
 StockModel.hasMany(DetalleDevolucionModel, { foreignKey: 'stock_id' });
@@ -139,7 +168,6 @@ DetalleVentaModel.hasMany(DetalleDevolucionModel, {
   foreignKey: 'detalle_venta_id',
   as: 'devoluciones'
 });
-
 
 DevolucionesModel.belongsTo(LocalesModel, {
   foreignKey: 'local_id',
@@ -223,10 +251,16 @@ ComboVentaLogModel.belongsTo(CombosModel, {
 });
 
 // 👉 asociación clave para el error:
-ComboProductosPermitidosModel.belongsTo(TallesModel,    { as: 'talle',    foreignKey: 'talle_id' });
+ComboProductosPermitidosModel.belongsTo(TallesModel, {
+  as: 'talle',
+  foreignKey: 'talle_id'
+});
 
 // (opcional)
-TallesModel.hasMany(ComboProductosPermitidosModel, { as: 'combo_permitidos', foreignKey: 'talle_id' });
+TallesModel.hasMany(ComboProductosPermitidosModel, {
+  as: 'combo_permitidos',
+  foreignKey: 'talle_id'
+});
 
 // RELACIONES MODULO DE COMBOS - FIN
 

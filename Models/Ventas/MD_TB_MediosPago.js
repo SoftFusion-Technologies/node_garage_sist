@@ -1,10 +1,11 @@
 /*
  * Programador: Benjamin Orellana
  * Fecha Creación: 30 / 06 / 2025
- * Versión: 1.0
+ * Versión: 1.1
  *
  * Descripción:
  * Este archivo (MD_TB_MediosPago.js) contiene la definición del modelo Sequelize para la tabla de medios de pago.
+ * Se agrega el campo 'tipo' para soportar medios SIMPLE y COMPUESTO.
  *
  * Tema: Modelos - Medios de Pago
  * Capa: Backend
@@ -43,6 +44,14 @@ export const MediosPagoModel = db.define(
       type: DataTypes.INTEGER,
       defaultValue: 0
     },
+
+    // NUEVO: tipo de medio de pago (SIMPLE | COMPUESTO)
+    tipo: {
+      type: DataTypes.ENUM('SIMPLE', 'COMPUESTO'),
+      allowNull: false,
+      defaultValue: 'SIMPLE'
+    },
+
     ajuste_porcentual: {
       type: DataTypes.DECIMAL(5, 2),
       defaultValue: 0
