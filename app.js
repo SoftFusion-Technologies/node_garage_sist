@@ -154,7 +154,7 @@ app.get('/ventas-historial', async (req, res) => {
     const query = `
       SELECT 
         v.id AS venta_id,
-        v.fecha,
+        DATE_FORMAT(v.fecha, '%Y-%m-%dT%H:%i:%s.000Z') AS fecha,
         v.total,
         v.estado,
         c.nombre AS cliente,
@@ -240,7 +240,6 @@ app.get('/ventas-historial', async (req, res) => {
     res.status(500).json({ mensajeError: err.message });
   }
 });
-
 
 // GET /ventas/:id/detalle
 app.get('/ventas/:id/detalle', async (req, res) => {
